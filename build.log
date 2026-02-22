@@ -1,0 +1,50 @@
+Building server
+DEPRECATED: The legacy builder is deprecated and will be removed in a future release.
+            Install the buildx component to build images with BuildKit:
+            https://docs.docker.com/go/buildx/
+
+Sending build context to Docker daemon    124MB
+Step 1/11 : FROM node:20-alpine
+ ---> 2b56f2779663
+Step 2/11 : WORKDIR /app
+ ---> Using cache
+ ---> c78312ed16c1
+Step 3/11 : COPY package*.json ./
+ ---> Using cache
+ ---> de5894fef4e2
+Step 4/11 : RUN npm ci --only=production
+ ---> Using cache
+ ---> 57aa9dce360f
+Step 5/11 : COPY prisma ./prisma/
+ ---> bc6cecde2527
+Step 6/11 : RUN npx prisma generate
+ ---> Running in 00333f438df2
+[91mprisma:warn Prisma failed to detect the libssl/openssl version to use, and may not work as expected. Defaulting to "openssl-1.1.x".
+Please manually install OpenSSL and try installing Prisma again.
+[0mPrisma schema loaded from prisma/schema.prisma
+[91mprisma:warn Prisma failed to detect the libssl/openssl version to use, and may not work as expected. Defaulting to "openssl-1.1.x".
+Please manually install OpenSSL and try installing Prisma again.
+[0m
+✔ Generated Prisma Client (v5.22.0) to ./node_modules/@prisma/client in 1.22s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+ ---> Removed intermediate container 00333f438df2
+ ---> c85a3d21ddcc
+Step 7/11 : COPY . .
+ ---> f5c94b5585ad
+Step 8/11 : RUN npm run build
+ ---> Running in 254a4f82d6d9
+
+> nurse-guru-server@1.0.0 build
+> tsc
+
+src/routes/cart.ts(29,37): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/routes/cart.ts(29,42): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/routes/payment.ts(34,38): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/routes/payment.ts(34,43): error TS7006: Parameter 'doc' implicitly has an 'any' type.
+src/routes/upload.ts(4,30): error TS2307: Cannot find module 'uuid' or its corresponding type declarations.
+The command '/bin/sh -c npm run build' returned a non-zero code: 2
+Service 'server' failed to build : Build failed

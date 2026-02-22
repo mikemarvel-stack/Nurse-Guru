@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  name            String
+  avatar          String?
+  role            String  @default("BUYER")
+  balance         Float     @default(0)
+  totalSales      Float     @default(0)
+  totalPurchases  Float     @default(0)
+  emailVerified   Boolean   @default(false)
+  resetToken      String?
+  resetTokenExpiry DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  documents       Document[]
+  orders          Order[]
+  reviews         Review[]
+  cartItems       CartItem[]
+
+  @@map("users")
+}
+
+model Document {
+  id              String          @id @default(uuid())
+  title           String
+  description     String
+  category        String
+  level           String
+  subject         String
+  price           Float
+  originalPrice   Float?
+  fileUrl         String
+  fileType        String
+  fileSize        Int
+  fileName        String
+  pageCount       Int?
+  wordCount       Int?
+  previewPages    Int             @default(5)
+  thumbnailUrl    String?
+  status          String  @default("PENDING")
+  rating          Float           @default(0)
+  reviewCount     Int             @default(0)
+  salesCount      Int             @default(0)
+  tags            String          // JSON array as string
+  isFeatured      Boolean         @default(false)
+  isBestseller    Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  sellerId        String
+  seller          User            @relation(fields: [sellerId], references: [id])
+  orders          Order[]
+  reviews         Review[]
+  cartItems       CartItem[]
+
+  @@map("documents")
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  amount          Float
+  status          String  @default("PENDING")
+  paymentMethod   String        @default("card")
+  paymentIntentId String?
+  downloadCount   Int           @default(0)
+  maxDownloads    Int           @default(5)
+  createdAt       DateTime      @default(now())
+  completedAt     DateTime?
+
+  // Relations
+  buyerId         String
+  buyer           User          @relation(fields: [buyerId], references: [id])
+  documentId      String
+  document        Document      @relation(fields: [documentId], references: [id])
+
+  @@map("orders")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId])
+  @@map("reviews")
+}
+
+model CartItem {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id])
+
+  @@unique([userId, documentId])
+  @@map("cart_items")
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  type      String   @default("general")
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contacts")
+}
+
+model SearchAnalytics {
+  id        String   @id @default(uuid())
+  query     String
+  results   Int      @default(0)
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@map("search_analytics")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+
+
