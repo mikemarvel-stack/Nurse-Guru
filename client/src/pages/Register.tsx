@@ -35,14 +35,22 @@ export function Register() {
     setIsLoading(true);
 
     try {
+      if (!name || !email || !password || !role) {
+        setError('Please fill in all fields');
+        setIsLoading(false);
+        return;
+      }
+
       const success = await register(email, password, name, role);
       if (success) {
         navigate(from, { replace: true });
-      } else {
-        setError('Registration failed. Please try again.');
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      setError(
+        err?.message || 
+        'Registration failed. Please check your information and try again.'
+      );
+      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -298,8 +306,8 @@ export function Register() {
                       </Button>
                       <Button 
                         type="submit" 
-                        className="flex-1 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
-                        disabled={isLoading}
+                        className="flex-1 rounded-lg bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading || !name || !email || !password || !role}
                       >
                         {isLoading ? 'Creating account...' : 'Create Account'}
                       </Button>

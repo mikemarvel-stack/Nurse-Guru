@@ -57,8 +57,12 @@ export const useAuthStore = create<AuthState>()(
           set({ user: data.user, isAuthenticated: true });
           return true;
         } catch (error: any) {
-          console.error('Register error:', error);
-          return false;
+          console.error('Register error:', error.response?.data || error.message);
+          throw new Error(
+            error.response?.data?.error || 
+            error.message || 
+            'Registration failed. Please try again.'
+          );
         }
       },
       
