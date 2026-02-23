@@ -46,6 +46,18 @@ async function main() {
                 avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emma',
                 balance: 150
             }
+        }),
+        prisma.user.upsert({
+            where: { email: 'admin@nurseguru.com' },
+            update: {},
+            create: {
+                email: 'admin@nurseguru.com',
+                password: hashedPassword,
+                name: 'Admin User',
+                role: 'ADMIN',
+                avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+                balance: 0
+            }
         })
     ]);
     console.log(`✅ Created ${users.length} users`);

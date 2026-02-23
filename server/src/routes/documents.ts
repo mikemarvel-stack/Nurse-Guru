@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest, requireSeller } from '../middleware/auth';
+import { authenticate, AuthRequest, requireSeller, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -263,6 +263,42 @@ router.post('/', authenticate, requireSeller, async (req: AuthRequest, res) => {
   }
 });
 
+// Create document as admin (instant approval, full access)
+router.post('/admin/upload', authenticate, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const data = createDocumentSchema.parse(req.body);
+
+    const document = await prisma.document.create({
+      data: {
+        ...data,
+        tags: JSON.stringify(data.tags),
+        sellerId: req.user!.id,
+        status: 'APPROVED' // Admin uploads are auto-approved
+      },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.status(201).json({
+      message: 'Document uploaded and approved instantly.',
+      document
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Admin create document error:', error);
+    res.status(500).json({ error: 'Failed to create document' });
+  }
+});
+
 // Update document (seller only, own documents)
 router.put('/:id', authenticate, requireSeller, async (req: AuthRequest, res) => {
   try {
@@ -299,7 +335,100 @@ router.put('/:id', authenticate, requireSeller, async (req: AuthRequest, res) =>
   }
 });
 
-// Delete document (seller only, own documents)
+// Approve pending document (admin only)
+router.patch('/:id/approve', authenticate, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const document = await prisma.document.findUnique({
+      where: { id }
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const updated = await prisma.document.update({
+      where: { id },
+      data: { status: 'APPROVED' },
+      include: {
+        seller: {
+          select: { id: true, name: true, avatar: true }
+        }
+      }
+    });
+
+    res.json({
+      message: 'Document approved and published',
+      document: updated
+    });
+  } catch (error) {
+    console.error('Approve document error:', error);
+    res.status(500).json({ error: 'Failed to approve document' });
+  }
+});
+
+// Reject pending document (admin only)
+router.patch('/:id/reject', authenticate, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const document = await prisma.document.findUnique({
+      where: { id }
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const updated = await prisma.document.update({
+      where: { id },
+      data: {
+        status: 'REJECTED',
+        description: `REJECTED: ${reason || 'No reason provided'}. Original: ${document.description}`
+      },
+      include: {
+        seller: {
+          select: { id: true, name: true, avatar: true }
+        }
+      }
+    });
+
+    res.json({
+      message: 'Document rejected',
+      document: updated
+    });
+  } catch (error) {
+    console.error('Reject document error:', error);
+    res.status(500).json({ error: 'Failed to reject document' });
+  }
+});
+
+// Get pending documents (admin only)
+router.get('/admin/pending', authenticate, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const documents = await prisma.document.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        seller: {
+          select: { id: true, name: true, email: true, avatar: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json({
+      count: documents.length,
+      documents
+    });
+  } catch (error) {
+    console.error('Get pending documents error:', error);
+    res.status(500).json({ error: 'Failed to fetch pending documents' });
+  }
+});
+
+// Delete document (seller own documents OR admin can delete any)
 router.delete('/:id', authenticate, requireSeller, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;

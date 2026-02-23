@@ -24,22 +24,49 @@ const storage = multer.diskStorage({
   }
 });
 
-// File filter
+// File filter - Extended format support for educational documents
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedTypes = [
+    // Documents
     'application/pdf',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/msword',
     'application/vnd.ms-powerpoint',
+    'application/vnd.ms-excel',
+    // Text & Code
+    'text/plain',
+    'text/csv',
+    'text/markdown',
+    'application/json',
+    'application/xml',
+    'application/x-yaml',
+    // Images
     'image/jpeg',
-    'image/png'
+    'image/png',
+    'image/webp',
+    'image/gif',
+    // Archives & E-books
+    'application/zip',
+    'application/x-rar-compressed',
+    'application/x-7z-compressed',
+    'application/epub+zip',
+    // Video & Audio
+    'video/mp4',
+    'video/mpeg',
+    'audio/mpeg',
+    'audio/wav',
+    'application/x-subrip'
   ];
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Allowed: PDF, DOCX, PPTX, JPG, PNG'));
+    cb(new Error(
+      'Invalid file type. Allowed: PDF, DOCX, PPTX, XLSX, JPG, PNG, WebP, GIF, ' +
+      'TXT, CSV, ZIP, EPUB, MP4, MP3, WAV, SRT, and more educational formats'
+    ));
   }
 };
 
@@ -47,7 +74,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB max
+    fileSize: 100 * 1024 * 1024 // 100MB max for educational content
   }
 });
 
