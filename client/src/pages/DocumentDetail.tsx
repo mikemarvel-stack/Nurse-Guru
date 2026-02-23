@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Star, 
@@ -28,19 +28,23 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SEO, seoConfigs } from '@/components/seo/SEO';
+import { DocumentPreview } from '@/components/DocumentPreview';
 import { useDocumentStore, useCartStore, useAuthStore, useOrderStore } from '@/store';
 import { formatPrice, formatFileSize, formatDate, generateStarRating, truncateText } from '@/lib/utils';
+import type { Document } from '@/types';
 
 export function DocumentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { fetchDocumentById, documents } = useDocumentStore();
+  const { fetchDocumentById } = useDocumentStore();
   const { addToCart, isInCart } = useCartStore();
   const { isAuthenticated, user } = useAuthStore();
   const { orders, createOrder, completeOrder } = useOrderStore();
   
   const [docItem, setDocItem] = useState<Document | null>(null);
+  const [order, setOrder] = useState<any>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [purchaseSuccess, setPurchaseSuccess] = useState(false);
 
@@ -77,13 +81,21 @@ export function DocumentDetail() {
       navigate('/login', { state: { from: `/document/${id}` } });
       return;
     }
-    setShowPurchaseDialog(true);
+    // Create order first
+    const newOrder = await createOrder(docItem.id, docItem.price.toString());
+    if (newOrder) {
+      setOrder(newOrder);
+      setShowPurchaseDialog(true);
+    }
   };
 
   const processPayment = async () => {
+    if (!order) {
+      console.error('Order is null');
+      return;
+    }
     setIsProcessing(true);
     try {
-      const order = await createOrder(docItem.id, docItem.price);
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 1500));
       await completeOrder(order.id);
@@ -234,7 +246,7 @@ export function DocumentDetail() {
 
                     <h4 className="mt-6 font-semibold text-gray-900">Tags:</h4>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {docItem.tags.map((tag) => (
+                      {(typeof docItem.tags === 'string' ? JSON.parse(docItem.tags) : docItem.tags).map((tag: string) => (
                         <Badge key={tag} variant="secondary">
                           {tag}
                         </Badge>
@@ -393,6 +405,14 @@ export function DocumentDetail() {
 
                       <div className="mt-6 space-y-3">
                         <Button 
+                          variant="outline"
+                          className="w-full gap-2"
+                          onClick={() => setShowPreview(true)}
+                        >
+                          <Eye className="h-5 w-5" />
+                          Preview ({docItem.previewPages} pages)
+                        </Button>
+                        <Button 
                           className="w-full gap-2" 
                           size="lg"
                           onClick={handlePurchase}
@@ -403,7 +423,7 @@ export function DocumentDetail() {
                         <Button 
                           variant="outline" 
                           className="w-full gap-2"
-                          onClick={() => addToCart(docItem)}
+                          onClick={() => addToCart(docItem.id)}
                           disabled={inCart}
                         >
                           {inCart ? 'Added to Cart' : 'Add to Cart'}
@@ -583,6 +603,17 @@ export function DocumentDetail() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Document Preview Modal */}
+      {showPreview && (
+        <DocumentPreview
+          title={docItem.title}
+          fileType={docItem.fileType}
+          previewPages={docItem.previewPages}
+          onClose={() => setShowPreview(false)}
+          onDownload={hasPurchased ? handleDownload : undefined}
+        />
+      )}
     </>
   );
 }

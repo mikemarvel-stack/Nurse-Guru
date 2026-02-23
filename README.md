@@ -59,7 +59,21 @@ docker-compose exec server npm run db:seed
 
 ## Development Setup
 
-### Backend
+### Quick Start (Concurrent Mode - Recommended)
+
+Start both frontend and backend simultaneously:
+
+```bash
+# From project root directory
+npm install
+npm run dev
+```
+
+This starts:
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+
+### Backend Only
 
 ```bash
 cd server
@@ -69,7 +83,7 @@ npm run db:seed
 npm run dev
 ```
 
-### Frontend
+### Frontend Only
 
 ```bash
 cd client

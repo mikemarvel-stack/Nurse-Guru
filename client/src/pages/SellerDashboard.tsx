@@ -81,7 +81,7 @@ export function SellerDashboard() {
     return null;
   }
 
-  if (user?.role !== 'SELLER' && user?.role !== 'seller') {
+  if (user?.role !== 'seller') {
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md text-center">

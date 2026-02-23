@@ -18,6 +18,7 @@ const upload_1 = __importDefault(require("./routes/upload"));
 const payment_1 = __importDefault(require("./routes/payment"));
 const users_1 = __importDefault(require("./routes/users"));
 const contact_1 = __importDefault(require("./routes/contact"));
+const email_verification_1 = __importDefault(require("./routes/email-verification"));
 const reviews_1 = __importDefault(require("./routes/reviews"));
 const analytics_1 = __importDefault(require("./routes/analytics"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
@@ -56,6 +57,7 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/password', password_1.default);
+app.use('/api/email-verification', email_verification_1.default);
 app.use('/api/documents', documents_1.default);
 app.use('/api/orders', orders_1.default);
 app.use('/api/cart', cart_1.default);

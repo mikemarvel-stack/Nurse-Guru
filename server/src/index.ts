@@ -13,6 +13,7 @@ import uploadRoutes from './routes/upload';
 import paymentRoutes from './routes/payment';
 import userRoutes from './routes/users';
 import contactRoutes from './routes/contact';
+import emailVerificationRoutes from './routes/email-verification';
 import reviewsRoutes from './routes/reviews';
 import analyticsRoutes from './routes/analytics';
 import notificationsRoutes from './routes/notifications';
@@ -61,6 +62,7 @@ app.get('/api/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/password', passwordRoutes);
+app.use('/api/email-verification', emailVerificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);

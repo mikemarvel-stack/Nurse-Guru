@@ -5,18 +5,14 @@ import {
   documentsApi, 
   ordersApi, 
   cartApi, 
-  uploadApi, 
-  paymentApi,
-  userApi 
+  paymentApi
 } from '@/services/api';
 import type { 
   User, 
   Document, 
   Order, 
   CartItem, 
-  DocumentFilters,
-  DocumentCategory,
-  DocumentLevel 
+  DocumentFilters
 } from '@/types';
 
 // Auth Store with API
@@ -32,7 +28,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
@@ -123,7 +119,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   pagination: null,
   
   setFilters: (newFilters) => {
-    set((state) => ({
+    set((state: DocumentState) => ({
       filters: { ...state.filters, ...newFilters }
     }));
   },
@@ -200,7 +196,8 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
   
   filterDocuments: () => {
-    const { documents, filters } = get();
+    const state = get();
+    const { documents, filters } = state;
     return documents.filter(doc => {
       if (filters.search && !doc.title.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
@@ -315,7 +312,7 @@ interface OrderState {
   downloadDocument: (orderId: string) => Promise<Blob | null>;
 }
 
-export const useOrderStore = create<OrderState>((set, get) => ({
+export const useOrderStore = create<OrderState>((set) => ({
   orders: [],
   sellerOrders: [],
   isLoading: false,

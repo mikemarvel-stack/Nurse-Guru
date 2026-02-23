@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SEO, seoConfigs } from '@/components/seo/SEO';
-import { validators, getFieldError, ValidationError } from '@/lib/validators';
+import { validators, type ValidationError } from '@/lib/validators';
 
 export function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -20,7 +20,6 @@ export function ResetPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
-  const [invalidToken, setInvalidToken] = useState(!token);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,7 +71,7 @@ export function ResetPassword() {
     }
   };
 
-  if (invalidToken) {
+  if (!token) {
     return (
       <>
         <SEO data={seoConfigs.home()} />
@@ -143,8 +142,8 @@ export function ResetPassword() {
                       placeholder="At least 8 characters"
                       className="mt-2"
                     />
-                    {getFieldError(errors, 'password') && (
-                      <p className="text-sm text-red-600 mt-1">{getFieldError(errors, 'password')}</p>
+                    {errors.find(e => e.field === 'password') && (
+                      <p className="text-sm text-red-600 mt-1">{errors.find(e => e.field === 'password')?.message}</p>
                     )}
                   </div>
 
@@ -159,8 +158,8 @@ export function ResetPassword() {
                       placeholder="Re-enter your password"
                       className="mt-2"
                     />
-                    {getFieldError(errors, 'confirmPassword') && (
-                      <p className="text-sm text-red-600 mt-1">{getFieldError(errors, 'confirmPassword')}</p>
+                    {errors.find(e => e.field === 'confirmPassword') && (
+                      <p className="text-sm text-red-600 mt-1">{errors.find(e => e.field === 'confirmPassword')?.message}</p>
                     )}
                   </div>
 

@@ -51,13 +51,15 @@ export function Cart() {
     try {
       // Process each item in cart
       for (const item of items) {
-        const order = await createOrder(item.document.id, item.document.price);
-        await completeOrder(order.id);
+        const order = await createOrder(item.document.id, item.document.price.toString());
+        if (order) {
+          await completeOrder(order.id);
+        }
       }
       
       await new Promise(resolve => setTimeout(resolve, 1500));
       setPurchaseSuccess(true);
-      clearCart();
+      await clearCart();
     } catch (error) {
       console.error('Checkout failed:', error);
     } finally {

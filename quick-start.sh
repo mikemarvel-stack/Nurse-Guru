@@ -4,16 +4,20 @@ echo "🚀 Nurse Guru - Quick Start Script"
 echo "=================================="
 
 # Check if we're in the right directory
-if [ ! -d "nurse-guru-fullstack" ]; then
-    echo "❌ Error: Run this script from the workspace root"
-    echo "   Expected to find 'nurse-guru-fullstack' directory"
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Run this script from the nurse-guru-fullstack directory"
+    echo "   Make sure you're in the project root"
     exit 1
 fi
 
-cd nurse-guru-fullstack
-
 echo ""
 echo "📦 Checking installations..."
+
+# Check root dependencies
+if [ ! -d "node_modules" ]; then
+    echo "⚠️  Installing root dependencies (concurrently)..."
+    npm install --silent
+fi
 
 # Check server
 if [ ! -d "server/node_modules" ]; then
@@ -30,7 +34,7 @@ fi
 echo "✅ Dependencies ready"
 
 # Check database
-if [ ! -f "data/dev.db" ]; then
+if [ ! -f "server/dev.db" ]; then
     echo ""
     echo "📊 Setting up database..."
     cd server && npm run db:migrate > /dev/null 2>&1 && npm run db:seed > /dev/null 2>&1 && cd ..
@@ -42,12 +46,18 @@ fi
 echo ""
 echo "🎉 Setup Complete! Ready to run:"
 echo ""
+echo "Start both frontend and backend concurrently:"
+echo "  npm run dev"
+echo ""
+echo "Or run them separately in different terminals:"
+echo ""
 echo "Terminal 1 - Backend:"
-echo "  cd nurse-guru-fullstack/server && npm run dev"
+echo "  npm run dev:server"
 echo ""
 echo "Terminal 2 - Frontend:"
-echo "  cd nurse-guru-fullstack/client && npm run dev"
+echo "  npm run dev:client"
 echo ""
+
 echo "Frontend URL: http://localhost:5173"
 echo "Backend URL: http://localhost:3001"
 echo ""

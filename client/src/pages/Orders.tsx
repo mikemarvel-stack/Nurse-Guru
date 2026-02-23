@@ -28,7 +28,7 @@ import type { Order } from '@/types';
 export function Orders() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
-  const { orders, canDownload, incrementDownload } = useOrderStore();
+  const { orders } = useOrderStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -54,21 +54,17 @@ export function Orders() {
   const completedOrders = filteredOrders.filter(o => o.status === 'completed');
   const pendingOrders = filteredOrders.filter(o => o.status === 'pending');
 
-  const handleDownload = (orderId: string, documentTitle: string) => {
-    if (canDownload(orderId)) {
-      // Simulate file download
-      const blob = new Blob(['This is a sample document content. In a real application, this would be the actual document file.'], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${documentTitle.replace(/\s+/g, '_')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      incrementDownload(orderId);
-    }
+  const handleDownload = (_orderId: string, documentTitle: string) => {
+    // Simulate file download
+    const blob = new Blob(['This is a sample document content. In a real application, this would be the actual document file.'], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${documentTitle.replace(/\s+/g, '_')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -176,7 +172,6 @@ export function Orders() {
           <OrdersList 
             orders={filteredOrders} 
             onDownload={handleDownload}
-            canDownload={canDownload}
           />
         </TabsContent>
 
@@ -184,7 +179,6 @@ export function Orders() {
           <OrdersList 
             orders={completedOrders}
             onDownload={handleDownload}
-            canDownload={canDownload}
           />
         </TabsContent>
 
@@ -192,7 +186,6 @@ export function Orders() {
           <OrdersList 
             orders={pendingOrders}
             onDownload={handleDownload}
-            canDownload={canDownload}
           />
         </TabsContent>
       </Tabs>
@@ -203,10 +196,9 @@ export function Orders() {
 interface OrdersListProps {
   orders: Order[];
   onDownload: (orderId: string, documentTitle: string) => void;
-  canDownload: (orderId: string) => boolean;
 }
 
-function OrdersList({ orders, onDownload, canDownload }: OrdersListProps) {
+function OrdersList({ orders, onDownload }: OrdersListProps) {
   if (orders.length === 0) {
     return (
       <div className="rounded-lg border border-dashed py-16 text-center">
@@ -268,7 +260,6 @@ function OrdersList({ orders, onDownload, canDownload }: OrdersListProps) {
                     <Button
                       className="gap-2"
                       onClick={() => onDownload(order.id, order.document.title)}
-                      disabled={!canDownload(order.id)}
                     >
                       <Download className="h-4 w-4" />
                       Download

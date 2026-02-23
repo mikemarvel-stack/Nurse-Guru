@@ -154,7 +154,7 @@ export function Profile() {
               <CardContent className="pt-6">
                 <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center mb-2">
                   <span className="text-lg font-bold text-teal-600">
-                    {user?.role === 'SELLER' ? 'S' : 'B'}
+                    {user?.role === 'seller' ? 'S' : 'B'}
                   </span>
                 </div>
                 <div className="text-lg font-bold text-gray-900 capitalize">
