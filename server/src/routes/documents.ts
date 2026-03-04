@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { authenticate, AuthRequest, requireSeller, requireAdmin } from '../middleware/auth';
 
+const router = Router();
+
 const createDocumentSchema = z.object({
   title: z.string().min(3),
   description: z.string().min(10),
@@ -51,14 +53,14 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    if (category) where.category = category;
-    if (level) where.level = level;
+    if (category) where.category = category as string;
+    if (level) where.level = level as string;
     if (subject) where.subject = { contains: subject as string, mode: 'insensitive' };
     if (minPrice) where.price = { ...where.price, gte: parseFloat(minPrice as string) };
     if (maxPrice) where.price = { ...where.price, lte: parseFloat(maxPrice as string) };
     if (minRating) where.rating = { gte: parseFloat(minRating as string) };
 
-    const orderBy: { price?: string; rating?: string; salesCount?: string; createdAt?: string } = {};
+    const orderBy: { price?: 'asc' | 'desc'; rating?: 'asc' | 'desc'; salesCount?: 'asc' | 'desc'; createdAt?: 'asc' | 'desc' } = {};
     switch (sortBy) {
       case 'price-low':
         orderBy.price = 'asc';
@@ -268,7 +270,7 @@ router.post('/', authenticate, requireSeller, async (req: AuthRequest, res) => {
             admins.forEach(a => {
               io.to(a.id).emit('notification', {
                 title: 'New document pending approval',
-                message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.",
+                message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.`,
                 type: 'document_review',
                 createdAt: new Date()
               });

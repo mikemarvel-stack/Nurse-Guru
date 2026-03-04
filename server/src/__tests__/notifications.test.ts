@@ -53,6 +53,12 @@ describe('Notifications API', () => {
     );
   });
 
+  afterEach(async () => {
+    // Clean notifications between tests but keep users
+    await prisma.notification.deleteMany({});
+  });
+  });
+
   describe('GET /api/notifications', () => {
     it('should return empty list for new user', async () => {
       const res = await request(app)
@@ -309,5 +315,11 @@ describe('Notifications API', () => {
       });
       expect(exists).not.toBeNull();
     });
+  });
+
+  afterAll(async () => {
+    // Clean up test users and data
+    await prisma.notification.deleteMany({});
+    await prisma.user.deleteMany({});
   });
 });

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { prisma } from '../index';
 import { authenticate, AuthRequest } from '../middleware/auth';
 
+const router = Router();
+
 // Get cart items
 router.get('/', authenticate, async (req: AuthRequest, res) => {
   try {

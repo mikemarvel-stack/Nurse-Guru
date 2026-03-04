@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { authenticate, AuthRequest, requireAdmin } from '../middleware/auth';
 
+const router = Router();
+
 const createNotificationSchema = z.object({
   userId: z.string(),
   title: z.string(),
