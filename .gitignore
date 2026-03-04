@@ -53,13 +53,17 @@ data/
 # Generated files
 *.tgz
 
-# Implementation / planning docs
+# Documentation - Project summaries and guides
 PROJECT_STATUS.md
 IMPLEMENTATION_SUMMARY.md
 FINAL_CHECKLIST.md
 ADMIN_GUIDE.md
 PROJECT_SETUP_COMPLETE.md
 AUDIT_REPORT.md
+SECURITY_AUDIT_REPORT.md
+DEPLOYMENT_CHECKLIST.md
+IMPLEMENTATION_COMPLETE.md
+START_HERE.md
 
 # Backups
 backups/
