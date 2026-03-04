@@ -118,57 +118,99 @@ export const seoConfigs = {
     }
   }),
 
-  browse: (filters?: { category?: string; subject?: string }): SEOData => ({
-    title: filters?.category 
-      ? `${formatCategory(filters.category)} - Browse Nursing Materials | Nurse Guru`
-      : filters?.subject
-      ? `${filters.subject} Materials - Browse | Nurse Guru`
-      : 'Browse Nursing Study Materials - NCLEX Prep & Notes | Nurse Guru',
-    description: filters?.category
-      ? `Browse our collection of ${formatCategory(filters.category).toLowerCase()}. Find high-quality nursing study materials from verified sellers.`
-      : 'Browse thousands of nursing study materials including NCLEX prep, care plans, drug cards, and more. Filter by category, subject, and price.',
-    keywords: [
-      'browse nursing materials',
-      'nursing study resources',
-      'NCLEX materials',
-      'nursing notes for sale',
-      'nursing school resources',
-      filters?.category || '',
-      filters?.subject || ''
-    ].filter(Boolean),
-    canonicalUrl: 'https://nurseguru.com/browse',
-    structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'CollectionPage',
-      name: 'Browse Nursing Materials',
-      description: 'Collection of nursing study materials for sale'
-    }
-  }),
+  browse: (filters?: { category?: string; subject?: string; search?: string; tags?: string[] }): SEOData => {
+    const hasSearch = filters?.search && filters.search.length > 0;
+    const hasTags = filters?.tags && filters.tags.length > 0;
+    
+    let title = 'Browse Nursing Study Materials - NCLEX Prep & Notes | Nurse Guru';
+    let description = 'Browse thousands of nursing study materials including NCLEX prep, care plans, drug cards, and more. Filter by category, subject, and price.';
+    const keywords = ['browse nursing materials', 'nursing study resources', 'NCLEX materials', 'nursing notes for sale', 'nursing school resources'];
 
-  document: (doc: { title: string; description: string; category: string; subject: string }): SEOData => ({
-    title: `${doc.title} | Nurse Guru`,
-    description: doc.description.slice(0, 160),
-    keywords: [
+    if (hasSearch) {
+      title = `${filters.search} - Nursing Study Materials | Nurse Guru`;
+      description = `Find ${filters.search} nursing materials. Browse study guides, notes, and resources for ${filters.search}.`;
+      keywords.push(filters.search!, `${filters.search} nursing`, `${filters.search} study materials`);
+    } else if (filters?.category) {
+      const cat = formatCategory(filters.category);
+      title = `${cat} - Browse Nursing Materials | Nurse Guru`;
+      description = `Browse our collection of ${cat.toLowerCase()}. Find high-quality nursing study materials from verified sellers.`;
+      keywords.push(filters.category, cat, `nursing ${cat.toLowerCase()}`);
+    } else if (filters?.subject) {
+      title = `${filters.subject} Materials - Browse | Nurse Guru`;
+      description = `Browse ${filters.subject} nursing materials. Study guides, notes, and resources for ${filters.subject}.`;
+      keywords.push(filters.subject, `${filters.subject} nursing`, `${filters.subject} study guide`);
+    }
+
+    if (hasTags) {
+      keywords.push(...filters.tags!);
+      const tagStr = filters.tags!.slice(0, 3).join(', ');
+      description += ` Tags: ${tagStr}.`;
+    }
+
+    return {
+      title,
+      description: description.slice(0, 160),
+      keywords: keywords.filter(Boolean),
+      canonicalUrl: hasSearch ? undefined : 'https://nurseguru.com/browse',
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: hasSearch ? `${filters.search} Nursing Materials` : 'Browse Nursing Materials',
+        description: description.slice(0, 160)
+      }
+    };
+  },
+
+  document: (doc: { 
+    id: string;
+    title: string; 
+    description: string; 
+    category: string; 
+    subject: string;
+    tags?: string[];
+    price?: number;
+    rating?: number;
+    reviewCount?: number;
+    seller?: { name: string };
+  }): SEOData => {
+    const keywords = [
       doc.subject,
       doc.category,
+      formatCategory(doc.category),
       'nursing material',
       'study guide',
       'nursing school',
-      'NCLEX prep'
-    ],
-    canonicalUrl: `https://nurseguru.com/document/${doc.title.toLowerCase().replace(/\s+/g, '-')}`,
-    structuredData: {
-      '@context': 'https://schema.org',
-      '@type': 'Product',
-      name: doc.title,
-      description: doc.description,
-      category: doc.category,
-      offers: {
-        '@type': 'Offer',
-        availability: 'https://schema.org/InStock'
+      `${doc.subject} nursing`,
+      ...(doc.tags || [])
+    ];
+
+    return {
+      title: `${doc.title} | ${doc.subject} | Nurse Guru`,
+      description: doc.description.slice(0, 160),
+      keywords,
+      canonicalUrl: `https://nurseguru.com/document/${doc.id}`,
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: doc.title,
+        description: doc.description,
+        category: formatCategory(doc.category),
+        brand: { '@type': 'Brand', name: 'Nurse Guru' },
+        offers: {
+          '@type': 'Offer',
+          price: doc.price || 0,
+          priceCurrency: 'USD',
+          availability: 'https://schema.org/InStock',
+          seller: doc.seller ? { '@type': 'Person', name: doc.seller.name } : undefined
+        },
+        aggregateRating: doc.rating && doc.reviewCount ? {
+          '@type': 'AggregateRating',
+          ratingValue: doc.rating,
+          reviewCount: doc.reviewCount
+        } : undefined
       }
-    }
-  }),
+    };
+  },
 
   seller: (): SEOData => ({
     title: 'Sell Your Nursing Materials | Become a Seller on Nurse Guru',

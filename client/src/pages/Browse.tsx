@@ -32,6 +32,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { SEO, seoConfigs } from '@/components/seo/SEO';
+import { PopularTags } from '@/components/PopularTags';
+import { TrendingSearches } from '@/components/TrendingSearches';
 import { useDocumentStore, useCartStore } from '@/store';
 import { documentCategories, documentLevels, subjects } from '@/store';
 import { formatPrice, truncateText, generateStarRating } from '@/lib/utils';
@@ -354,6 +356,7 @@ export function Browse() {
     subject: searchParams.get('subject') || undefined,
     minRating: searchParams.get('minRating') ? Number(searchParams.get('minRating')) : undefined,
   });
+  const [selectedTags, setSelectedTags] = useState<string[]>(searchParams.getAll('tags'));
 
   // Update filters from URL on mount
   useEffect(() => {
@@ -362,6 +365,7 @@ export function Browse() {
     const level = searchParams.get('level') as DocumentLevel | undefined;
     const subject = searchParams.get('subject') || undefined;
     const sortBy = (searchParams.get('sort') as typeof storeFilters.sortBy) || 'newest';
+    const tags = searchParams.getAll('tags');
     
     setLocalFilters({ category, level, subject, minRating: undefined });
     setFilters({ search, category, level, subject, sortBy });
@@ -418,7 +422,7 @@ export function Browse() {
 
   return (
     <>
-      <SEO data={seoConfigs.browse(localFilters)} />
+      <SEO data={seoConfigs.browse({ ...localFilters, search: searchParams.get('search') || undefined, tags: selectedTags })} />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -595,14 +599,22 @@ export function Browse() {
                 </Button>
               </div>
             ) : (
-              <div className={viewMode === 'grid' 
-                ? 'grid gap-6 sm:grid-cols-2 xl:grid-cols-3' 
-                : 'space-y-4'
-              }>
-                {filteredDocuments.map((doc) => (
-                  <DocumentCard key={doc.id} document={doc} viewMode={viewMode} />
-                ))}
-              </div>
+              <>
+                <div className={viewMode === 'grid' 
+                  ? 'grid gap-6 sm:grid-cols-2 xl:grid-cols-3' 
+                  : 'space-y-4'
+                }>
+                  {filteredDocuments.map((doc) => (
+                    <DocumentCard key={doc.id} document={doc} viewMode={viewMode} />
+                  ))}
+                </div>
+                
+                {/* SEO Components */}
+                <div className="mt-12 grid gap-6 lg:grid-cols-2">
+                  <PopularTags />
+                  <TrendingSearches />
+                </div>
+              </>
             )}
           </div>
         </div>

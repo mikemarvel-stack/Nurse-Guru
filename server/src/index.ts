@@ -32,6 +32,7 @@ import analyticsRoutes from './routes/analytics';
 import notificationsRoutes from './routes/notifications';
 import webhooksRoutes from './routes/webhooks';
 import metricsRoutes from './routes/metrics';
+import seoRoutes from './routes/seo';
 
 dotenv.config();
 
@@ -112,6 +113,9 @@ app.get('/api/health', (req, res) => {
 
 // Metrics endpoint (no auth required)
 app.use('/api', metricsRoutes);
+
+// SEO endpoints (no auth required)
+app.use('/api/seo', seoRoutes);
 
 // API Routes with rate limiting
 app.use('/api/auth/login', authLimiter);

@@ -130,7 +130,18 @@ export function DocumentDetail() {
 
   return (
     <>
-      <SEO data={seoConfigs.document(docItem)} />
+      <SEO data={seoConfigs.document({
+        id: docItem.id,
+        title: docItem.title,
+        description: docItem.description,
+        category: docItem.category,
+        subject: docItem.subject,
+        tags: typeof docItem.tags === 'string' ? JSON.parse(docItem.tags) : docItem.tags,
+        price: docItem.price,
+        rating: docItem.rating,
+        reviewCount: docItem.reviewCount,
+        seller: docItem.seller
+      })} />
       
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}

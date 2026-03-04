@@ -37,20 +37,29 @@ router.get('/', async (req, res) => {
       minRating,
       sortBy = 'newest',
       page = '1',
-      limit = '20'
+      limit = '20',
+      tags
     } = req.query;
 
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
-    const where: { status: string; OR?: any[]; category?: string; level?: string; subject?: any; price?: any; rating?: any } = { status: 'APPROVED' };
+    const where: { status: string; OR?: any[]; AND?: any[]; category?: string; level?: string; subject?: any; price?: any; rating?: any } = { status: 'APPROVED' };
 
     if (search) {
       where.OR = [
         { title: { contains: search as string, mode: 'insensitive' } },
         { description: { contains: search as string, mode: 'insensitive' } },
-        { subject: { contains: search as string, mode: 'insensitive' } }
+        { subject: { contains: search as string, mode: 'insensitive' } },
+        { tags: { contains: search as string, mode: 'insensitive' } }
       ];
+    }
+
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      where.AND = tagArray.map(tag => ({
+        tags: { contains: tag as string, mode: 'insensitive' }
+      }));
     }
 
     if (category) where.category = category as string;
