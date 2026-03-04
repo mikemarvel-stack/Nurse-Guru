@@ -1,3 +1,77 @@
+# Nurse Guru — Marketplace for Nursing Documents
+
+This repository is a fullstack marketplace for nursing study materials and documents (React + Vite frontend, Express + TypeScript backend, Prisma + SQLite DB).
+
+Features
+- User registration / login (buyer, seller, admin)
+- Seller uploads with admin approval workflow
+- Document previews and downloads
+- Notifications for admins and users (upload review, contact messages)
+
+Prerequisites
+- Node.js 18+ and npm
+- Git
+
+Local setup
+1. Clone the repo:
+
+```bash
+git clone <repo-url>
+cd nurse-guru-fullstack
+```
+
+2. Install dependencies (root uses concurrently to run both apps):
+
+```bash
+npm install
+cd client && npm install
+cd ../server && npm install
+```
+
+3. Environment variables
+Create a `.env` file in the `server/` directory with at least:
+
+```
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="your_jwt_secret"
+PORT=3001
+```
+
+4. Seed the database (creates demo users including an admin):
+
+```bash
+cd server
+npm run db:seed
+```
+
+5. Run development servers concurrently from the repo root:
+
+```bash
+npm run dev
+```
+
+API notes
+- Backend: `server/src` — main routes mounted under `/api` (documents, auth, upload, notifications, contact, orders, etc.).
+- Frontend: `client/src` — React + Vite app.
+
+Notifications behavior
+- Seller uploads create notifications for admin users (pending review).
+- Admin approval/rejection notifies the seller.
+- Contact submissions create notifications for admins.
+
+Files added/edited in this change
+- `.gitignore` — ignores nonessential files, build artifacts, uploads, and implementation plan docs.
+- `README.md` — this file.
+
+Next steps (recommended)
+- Implement frontend notification store and UI (`client/src/store` + `client/src/components/NotificationCenter.tsx`).
+- Untrack any already-committed implementation docs and then commit the `.gitignore`.
+
+Contributing
+- Open an issue or PR. Follow existing code style and run linters/tests before submitting.
+
+License
+- MIT
 # Nurse Guru - Full Stack Application
 
 A complete marketplace platform for nursing students to buy and sell study materials.
