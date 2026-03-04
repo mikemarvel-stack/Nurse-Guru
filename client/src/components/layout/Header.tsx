@@ -54,7 +54,7 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img
-              src="http://localhost:3001/public/nurse_guru_logo.png"
+              src="/nurse_guru_logo.png"
               alt="Nurse Guru"
               className="h-10 w-10 rounded-lg object-cover"
             />
