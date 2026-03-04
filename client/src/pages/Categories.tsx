@@ -39,10 +39,10 @@ export function Categories() {
   return (
     <>
       <SEO data={{
-        title: 'Browse Categories - AcadMarket',
-        description: 'Explore academic documents by category. Find research papers, theses, study guides, case studies, and more.',
-        keywords: ['categories', 'academic documents', 'research papers', 'theses', 'study guides', 'browse'],
-        canonicalUrl: 'https://acadmarket.com/categories'
+        title: 'Browse Categories - Nurse Guru',
+        description: 'Explore nursing study materials by category. Find research papers, care plans, study guides, case studies, and more.',
+        keywords: ['categories', 'nursing documents', 'nursing study materials', 'research papers', 'care plans', 'study guides'],
+        canonicalUrl: 'https://nurseguru.com/categories'
       }} />
       
       <div className="container mx-auto px-4 py-8">

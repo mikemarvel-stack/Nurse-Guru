@@ -192,7 +192,7 @@ npm run dev:client
 - [ ] Check window title shows "Nurse Guru"
 - [ ] Email subjects say "Nurse Guru"
 - [ ] Dashboard mentions "Nurse Guru"
-- [ ] No "AcadMarket" references remain
+- [x] No "AcadMarket" references remain
 - [ ] API responses match Nurse Guru model names
 
 #### 5. All Other Features
