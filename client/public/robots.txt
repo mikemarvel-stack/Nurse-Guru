@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /seller
+Disallow: /profile
+Disallow: /cart
+Disallow: /orders
+
+Sitemap: https://nurseguru.com/sitemap.xml

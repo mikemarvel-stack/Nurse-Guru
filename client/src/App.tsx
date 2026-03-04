@@ -2,23 +2,26 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { Home } from '@/pages/Home';
-import { Browse } from '@/pages/Browse';
-import { Categories } from '@/pages/Categories';
-import { DocumentDetail } from '@/pages/DocumentDetail';
-import { Cart } from '@/pages/Cart';
-import { Login } from '@/pages/Login';
-import { Register } from '@/pages/Register';
-import { SellerDashboard } from '@/pages/SellerDashboard';
-import { Orders } from '@/pages/Orders';
-import { Profile } from '@/pages/Profile';
-import { Help } from '@/pages/Help';
-import { Contact } from '@/pages/Contact';
-import { Terms } from '@/pages/Terms';
-import { ForgotPassword } from '@/pages/ForgotPassword';
-import { ResetPassword } from '@/pages/ResetPassword';
-import { AdminDashboard } from '@/pages/AdminDashboard';
+import { lazyLoad } from '@/lib/lazy-load';
 import { Toaster } from '@/components/ui/sonner';
+
+// Lazy load pages
+const Home = lazyLoad(() => import('@/pages/Home').then(m => ({ default: m.Home })));
+const Browse = lazyLoad(() => import('@/pages/Browse').then(m => ({ default: m.Browse })));
+const Categories = lazyLoad(() => import('@/pages/Categories').then(m => ({ default: m.Categories })));
+const DocumentDetail = lazyLoad(() => import('@/pages/DocumentDetail').then(m => ({ default: m.DocumentDetail })));
+const Cart = lazyLoad(() => import('@/pages/Cart').then(m => ({ default: m.Cart })));
+const Login = lazyLoad(() => import('@/pages/Login').then(m => ({ default: m.Login })));
+const Register = lazyLoad(() => import('@/pages/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = lazyLoad(() => import('@/pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazyLoad(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const SellerDashboard = lazyLoad(() => import('@/pages/SellerDashboard').then(m => ({ default: m.SellerDashboard })));
+const Orders = lazyLoad(() => import('@/pages/Orders').then(m => ({ default: m.Orders })));
+const Profile = lazyLoad(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
+const Help = lazyLoad(() => import('@/pages/Help').then(m => ({ default: m.Help })));
+const Contact = lazyLoad(() => import('@/pages/Contact').then(m => ({ default: m.Contact })));
+const Terms = lazyLoad(() => import('@/pages/Terms').then(m => ({ default: m.Terms })));
+const AdminDashboard = lazyLoad(() => import('@/pages/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 function App() {
   return (
@@ -46,7 +49,7 @@ function App() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/admin" element={<AdminDashboard />} />
               
-              {/* Placeholder routes for future implementation */}
+              {/* Placeholder routes */}
               <Route path="/privacy" element={<div className="container mx-auto px-4 py-16 text-center">
                 <h1 className="text-2xl font-bold">Privacy Policy</h1>
                 <p className="mt-4 text-gray-600">Coming soon...</p>

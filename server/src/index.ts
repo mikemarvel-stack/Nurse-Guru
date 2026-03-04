@@ -12,6 +12,7 @@ import { validateEnv } from './utils/env';
 import logger from './utils/logger';
 import { requestId } from './middleware/requestId';
 import { timeout } from './middleware/timeout';
+import { metricsMiddleware } from './middleware/metrics';
 import { apiLimiter, authLimiter, registerLimiter, paymentLimiter, uploadLimiter } from './middleware/rateLimit';
 import { sanitizeInput } from './middleware/sanitize';
 import { initSocket } from './socket';
@@ -30,6 +31,7 @@ import reviewsRoutes from './routes/reviews';
 import analyticsRoutes from './routes/analytics';
 import notificationsRoutes from './routes/notifications';
 import webhooksRoutes from './routes/webhooks';
+import metricsRoutes from './routes/metrics';
 
 dotenv.config();
 
@@ -43,6 +45,9 @@ export const prisma = new PrismaClient({
 
 // Trust proxy for rate limiting and security headers
 app.set('trust proxy', 1);
+
+// Metrics middleware (before other middleware)
+app.use(metricsMiddleware);
 
 // Security: Helmet for security headers
 app.use(helmet({
@@ -104,6 +109,9 @@ app.get('/api/health', (req, res) => {
     environment: env.NODE_ENV
   });
 });
+
+// Metrics endpoint (no auth required)
+app.use('/api', metricsRoutes);
 
 // API Routes with rate limiting
 app.use('/api/auth/login', authLimiter);

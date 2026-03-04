@@ -12,9 +12,16 @@
     "build:server": "cd server && npm run build",
     "start": "concurrently \"npm run start:client\" \"npm run start:server\"",
     "start:client": "cd client && npm run preview",
-    "start:server": "cd server && npm run start"
+    "start:server": "cd server && npm run start",
+    "prepare": "husky",
+    "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
+    "concurrently": "^8.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
+    "prettier": "^3.8.1"
   }
 }
