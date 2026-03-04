@@ -1,52 +1,30 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEnv = exports.validateEnvironment = void 0;
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-const requiredEnvVars = [
-    'JWT_SECRET',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_PUBLISHABLE_KEY'
-];
-const optionalEnvVars = [
-    'PORT',
-    'NODE_ENV',
-    'FRONTEND_URL'
-];
-const validateEnvironment = () => {
-    const missingVars = [];
-    for (const envVar of requiredEnvVars) {
-        if (!process.env[envVar]) {
-            missingVars.push(envVar);
+exports.validateEnv = void 0;
+const zod_1 = require("zod");
+const envSchema = zod_1.z.object({
+    NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
+    JWT_SECRET: zod_1.z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+    DATABASE_URL: zod_1.z.string().min(1, 'DATABASE_URL is required'),
+    STRIPE_SECRET_KEY: zod_1.z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: zod_1.z.string().optional(),
+    PORT: zod_1.z.string().transform(Number).default('3001'),
+    FRONTEND_URL: zod_1.z.string().url().optional()
+});
+const validateEnv = () => {
+    try {
+        return envSchema.parse(process.env);
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            console.error('❌ Environment validation failed:');
+            error.errors.forEach(err => {
+                console.error(`  - ${err.path.join('.')}: ${err.message}`);
+            });
+            process.exit(1);
         }
+        throw error;
     }
-    if (missingVars.length > 0) {
-        console.error('❌ Missing required environment variables:');
-        missingVars.forEach(v => console.error(`   - ${v}`));
-        process.exit(1);
-    }
-    // Log optional vars that are not set
-    const unsetOptional = optionalEnvVars.filter(v => !process.env[v]);
-    if (unsetOptional.length > 0) {
-        console.warn('⚠️  Using default values for optional environment variables:');
-        unsetOptional.forEach(v => console.warn(`   - ${v} (using default)`));
-    }
-    console.log('✅ Environment variables validated');
 };
-exports.validateEnvironment = validateEnvironment;
-const getEnv = (key, defaultValue) => {
-    const value = process.env[key];
-    if (!value && !defaultValue) {
-        throw new Error(`Environment variable ${key} is not set`);
-    }
-    return value || defaultValue || '';
-};
-exports.getEnv = getEnv;
-exports.default = {
-    validateEnvironment: exports.validateEnvironment,
-    getEnv: exports.getEnv
-};
+exports.validateEnv = validateEnv;
 //# sourceMappingURL=env.js.map

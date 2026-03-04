@@ -1,41 +1,50 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRateLimiter = void 0;
-const store = {};
-const createRateLimiter = (windowMs = 15 * 60 * 1000, maxRequests = 100) => {
-    return (req, res, next) => {
-        const key = req.ip || 'unknown';
-        const now = Date.now();
-        if (!store[key]) {
-            store[key] = { count: 1, resetTime: now + windowMs };
-            return next();
-        }
-        if (now > store[key].resetTime) {
-            store[key] = { count: 1, resetTime: now + windowMs };
-            return next();
-        }
-        store[key].count++;
-        if (store[key].count > maxRequests) {
-            return res.status(429).json({
-                error: 'Too many requests, please try again later',
-                retryAfter: Math.ceil((store[key].resetTime - now) / 1000)
-            });
-        }
-        res.set('X-RateLimit-Limit', maxRequests.toString());
-        res.set('X-RateLimit-Remaining', (maxRequests - store[key].count).toString());
-        res.set('X-RateLimit-Reset', store[key].resetTime.toString());
-        next();
-    };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-exports.createRateLimiter = createRateLimiter;
-// Cleanup old entries every hour
-setInterval(() => {
-    const now = Date.now();
-    Object.keys(store).forEach(key => {
-        if (store[key].resetTime < now) {
-            delete store[key];
-        }
-    });
-}, 60 * 60 * 1000);
-exports.default = exports.createRateLimiter;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.uploadLimiter = exports.paymentLimiter = exports.registerLimiter = exports.authLimiter = exports.apiLimiter = void 0;
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
+// General API rate limiter
+exports.apiLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    message: { error: 'Too many requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Strict rate limiter for authentication endpoints
+exports.authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // 5 attempts per 15 minutes
+    message: { error: 'Too many login attempts, please try again later' },
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Rate limiter for registration
+exports.registerLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 3, // 3 registrations per hour per IP
+    message: { error: 'Too many accounts created, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Rate limiter for payment endpoints
+exports.paymentLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10,
+    message: { error: 'Too many payment requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+// Rate limiter for file uploads
+exports.uploadLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5,
+    message: { error: 'Too many upload requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+exports.default = exports.apiLimiter;
 //# sourceMappingURL=rateLimit.js.map

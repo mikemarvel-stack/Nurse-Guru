@@ -9,19 +9,29 @@ const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const auth_1 = require("../middleware/auth");
 const fs_1 = __importDefault(require("fs"));
+const logger_1 = __importDefault(require("../utils/logger"));
+const errors_1 = require("../utils/errors");
 const router = (0, express_1.Router)();
 // Ensure uploads directory exists
 const uploadsDir = path_1.default.join(__dirname, '../../../uploads');
 if (!fs_1.default.existsSync(uploadsDir)) {
     fs_1.default.mkdirSync(uploadsDir, { recursive: true });
 }
+// Sanitize filename to prevent path traversal
+const sanitizeFilename = (filename) => {
+    return filename
+        .replace(/[^a-zA-Z0-9.-]/g, '_')
+        .replace(/\.{2,}/g, '.')
+        .substring(0, 255);
+};
 // Configure multer storage
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
         cb(null, uploadsDir);
     },
     filename: (req, file, cb) => {
-        const uniqueName = `${(0, uuid_1.v4)()}-${file.originalname}`;
+        const sanitized = sanitizeFilename(file.originalname);
+        const uniqueName = `${(0, uuid_1.v4)()}-${sanitized}`;
         cb(null, uniqueName);
     }
 });
@@ -79,7 +89,7 @@ const upload = (0, multer_1.default)({
 router.post('/document', auth_1.authenticate, auth_1.requireSeller, upload.single('file'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
+            throw new errors_1.ValidationError('No file uploaded');
         }
         const fileInfo = {
             filename: req.file.filename,
@@ -88,13 +98,14 @@ router.post('/document', auth_1.authenticate, auth_1.requireSeller, upload.singl
             mimetype: req.file.mimetype,
             url: `/uploads/${req.file.filename}`
         };
+        logger_1.default.info('File uploaded', { userId: req.user?.id, filename: req.file.filename });
         res.json({
             message: 'File uploaded successfully',
             file: fileInfo
         });
     }
     catch (error) {
-        console.error('Upload error:', error);
+        logger_1.default.error('Upload error:', error);
         res.status(500).json({ error: 'Failed to upload file' });
     }
 });
@@ -102,24 +113,39 @@ router.post('/document', auth_1.authenticate, auth_1.requireSeller, upload.singl
 router.post('/thumbnail', auth_1.authenticate, upload.single('thumbnail'), async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ error: 'No image uploaded' });
+            throw new errors_1.ValidationError('No image uploaded');
         }
+        logger_1.default.info('Thumbnail uploaded', { userId: req.user?.id, filename: req.file.filename });
         res.json({
             message: 'Thumbnail uploaded successfully',
             url: `/uploads/${req.file.filename}`
         });
     }
     catch (error) {
+        logger_1.default.error('Thumbnail upload error:', error);
         res.status(500).json({ error: 'Failed to upload thumbnail' });
     }
 });
-// Delete uploaded file
+// Delete uploaded file - SECURED
 router.delete('/:filename', auth_1.authenticate, async (req, res) => {
     try {
         const { filename } = req.params;
-        const filePath = path_1.default.join(uploadsDir, filename);
+        // Prevent path traversal attacks
+        if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            throw new errors_1.ValidationError('Invalid filename');
+        }
+        // Use basename to ensure we only get the filename
+        const safeFilename = path_1.default.basename(filename);
+        const filePath = path_1.default.join(uploadsDir, safeFilename);
+        // Verify the resolved path is still within uploads directory
+        const resolvedPath = path_1.default.resolve(filePath);
+        const resolvedUploadsDir = path_1.default.resolve(uploadsDir);
+        if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+            throw new errors_1.ValidationError('Invalid file path');
+        }
         if (fs_1.default.existsSync(filePath)) {
             fs_1.default.unlinkSync(filePath);
+            logger_1.default.info('File deleted', { userId: req.user?.id, filename: safeFilename });
             res.json({ message: 'File deleted' });
         }
         else {
@@ -127,7 +153,13 @@ router.delete('/:filename', auth_1.authenticate, async (req, res) => {
         }
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to delete file' });
+        logger_1.default.error('Delete file error:', error);
+        if (error instanceof errors_1.ValidationError) {
+            res.status(400).json({ error: error.message });
+        }
+        else {
+            res.status(500).json({ error: 'Failed to delete file' });
+        }
     }
 });
 exports.default = router;

@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
-let tokenRefreshTimer: NodeJS.Timeout | null = null;
+let tokenRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const initSocket = () => {
   if (socket?.connected) return socket;

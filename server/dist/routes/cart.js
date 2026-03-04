@@ -1,14 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 // Get cart items
 router.get('/', auth_1.authenticate, async (req, res) => {
     try {
-        const cartItems = await prisma.cartItem.findMany({
+        const cartItems = await index_1.prisma.cartItem.findMany({
             where: { userId: req.user.id },
             include: {
                 document: {
@@ -37,7 +36,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
     try {
         const { documentId } = req.body;
         // Check if document exists and is approved
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id: documentId }
         });
         if (!document) {
@@ -47,7 +46,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Document not available' });
         }
         // Check if already purchased
-        const existingOrder = await prisma.order.findFirst({
+        const existingOrder = await index_1.prisma.order.findFirst({
             where: {
                 buyerId: req.user.id,
                 documentId,
@@ -58,7 +57,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Already purchased' });
         }
         // Check if already in cart
-        const existingCartItem = await prisma.cartItem.findUnique({
+        const existingCartItem = await index_1.prisma.cartItem.findUnique({
             where: {
                 userId_documentId: {
                     userId: req.user.id,
@@ -69,7 +68,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
         if (existingCartItem) {
             return res.status(400).json({ error: 'Already in cart' });
         }
-        const cartItem = await prisma.cartItem.create({
+        const cartItem = await index_1.prisma.cartItem.create({
             data: {
                 userId: req.user.id,
                 documentId
@@ -102,7 +101,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
 router.delete('/:documentId', auth_1.authenticate, async (req, res) => {
     try {
         const { documentId } = req.params;
-        await prisma.cartItem.delete({
+        await index_1.prisma.cartItem.delete({
             where: {
                 userId_documentId: {
                     userId: req.user.id,
@@ -119,7 +118,7 @@ router.delete('/:documentId', auth_1.authenticate, async (req, res) => {
 // Clear cart
 router.delete('/', auth_1.authenticate, async (req, res) => {
     try {
-        await prisma.cartItem.deleteMany({
+        await index_1.prisma.cartItem.deleteMany({
             where: { userId: req.user.id }
         });
         res.json({ message: 'Cart cleared' });
@@ -132,7 +131,7 @@ router.delete('/', auth_1.authenticate, async (req, res) => {
 router.get('/check/:documentId', auth_1.authenticate, async (req, res) => {
     try {
         const { documentId } = req.params;
-        const cartItem = await prisma.cartItem.findUnique({
+        const cartItem = await index_1.prisma.cartItem.findUnique({
             where: {
                 userId_documentId: {
                     userId: req.user.id,

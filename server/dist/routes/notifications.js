@@ -2,10 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const createNotificationSchema = zod_1.z.object({
     userId: zod_1.z.string(),
     title: zod_1.z.string(),
@@ -16,7 +15,7 @@ const createNotificationSchema = zod_1.z.object({
 router.get('/', auth_1.authenticate, async (req, res) => {
     try {
         const { unreadOnly } = req.query;
-        const notifications = await prisma.notification.findMany({
+        const notifications = await index_1.prisma.notification.findMany({
             where: {
                 userId: req.user.id,
                 ...(unreadOnly === 'true' && { read: false })
@@ -33,13 +32,13 @@ router.get('/', auth_1.authenticate, async (req, res) => {
 // Mark notification as read
 router.put('/:id/read', auth_1.authenticate, async (req, res) => {
     try {
-        const notification = await prisma.notification.findUnique({
+        const notification = await index_1.prisma.notification.findUnique({
             where: { id: req.params.id }
         });
         if (!notification || notification.userId !== req.user.id) {
             return res.status(404).json({ error: 'Notification not found' });
         }
-        const updated = await prisma.notification.update({
+        const updated = await index_1.prisma.notification.update({
             where: { id: req.params.id },
             data: { read: true }
         });
@@ -52,7 +51,7 @@ router.put('/:id/read', auth_1.authenticate, async (req, res) => {
 // Mark all as read
 router.put('/read-all', auth_1.authenticate, async (req, res) => {
     try {
-        await prisma.notification.updateMany({
+        await index_1.prisma.notification.updateMany({
             where: {
                 userId: req.user.id,
                 read: false
@@ -65,11 +64,11 @@ router.put('/read-all', auth_1.authenticate, async (req, res) => {
         res.status(500).json({ error: 'Failed to mark notifications as read' });
     }
 });
-// Create notification (internal/admin)
-router.post('/', async (req, res) => {
+// Create notification (admin only - internal use)
+router.post('/', auth_1.authenticate, auth_1.requireAdmin, async (req, res) => {
     try {
         const { userId, title, message, type } = createNotificationSchema.parse(req.body);
-        const notification = await prisma.notification.create({
+        const notification = await index_1.prisma.notification.create({
             data: {
                 userId,
                 title,
@@ -89,13 +88,13 @@ router.post('/', async (req, res) => {
 // Delete notification
 router.delete('/:id', auth_1.authenticate, async (req, res) => {
     try {
-        const notification = await prisma.notification.findUnique({
+        const notification = await index_1.prisma.notification.findUnique({
             where: { id: req.params.id }
         });
         if (!notification || notification.userId !== req.user.id) {
             return res.status(404).json({ error: 'Notification not found' });
         }
-        await prisma.notification.delete({
+        await index_1.prisma.notification.delete({
             where: { id: req.params.id }
         });
         res.json({ message: 'Notification deleted' });

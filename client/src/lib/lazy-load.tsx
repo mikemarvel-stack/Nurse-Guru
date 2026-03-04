@@ -1,4 +1,4 @@
-import { Suspense, lazy, ComponentType } from 'react';
+import { Suspense, lazy, type ComponentType } from 'react';
 import { Spinner } from '@/components/ui/spinner';
 
 export function lazyLoad<T extends ComponentType<any>>(

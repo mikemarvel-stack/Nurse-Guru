@@ -5,9 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const stripe_1 = __importDefault(require("stripe"));
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16'
 });
@@ -63,13 +62,13 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
     }
     // Create orders for each document
     for (const documentId of documentIds) {
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id: documentId }
         });
         if (!document)
             continue;
         // Check if order already exists
-        const existingOrder = await prisma.order.findFirst({
+        const existingOrder = await index_1.prisma.order.findFirst({
             where: {
                 buyerId: userId,
                 documentId,
@@ -79,7 +78,7 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
         if (existingOrder)
             continue;
         // Create order
-        await prisma.order.create({
+        await index_1.prisma.order.create({
             data: {
                 buyerId: userId,
                 documentId,
@@ -90,14 +89,14 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
             }
         });
         // Update document sales count
-        await prisma.document.update({
+        await index_1.prisma.document.update({
             where: { id: documentId },
             data: { salesCount: { increment: 1 } }
         });
         // Update seller balance
         const commission = document.price * 0.15; // 15% commission
         const sellerEarnings = document.price - commission;
-        await prisma.user.update({
+        await index_1.prisma.user.update({
             where: { id: document.sellerId },
             data: {
                 balance: { increment: sellerEarnings },
@@ -105,7 +104,7 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
             }
         });
         // Clear cart for buyer
-        await prisma.cartItem.deleteMany({
+        await index_1.prisma.cartItem.deleteMany({
             where: {
                 userId,
                 documentId
@@ -126,24 +125,24 @@ async function handleChargeRefunded(charge) {
     const paymentIntentId = typeof charge.payment_intent === 'string'
         ? charge.payment_intent
         : charge.payment_intent.id;
-    const orders = await prisma.order.findMany({
+    const orders = await index_1.prisma.order.findMany({
         where: { paymentIntentId }
     });
     for (const order of orders) {
         // Update order status to refunded
-        await prisma.order.update({
+        await index_1.prisma.order.update({
             where: { id: order.id },
             data: { status: 'REFUNDED' }
         });
         // Fetch document to get seller info
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id: order.documentId }
         });
         if (!document)
             return;
         // Reverse seller's earnings
         const sellerEarnings = order.amount * 0.85; // 85% to seller
-        await prisma.user.update({
+        await index_1.prisma.user.update({
             where: { id: document.sellerId },
             data: {
                 balance: { decrement: sellerEarnings },

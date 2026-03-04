@@ -1,11 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const createDocumentSchema = zod_1.z.object({
     title: zod_1.z.string().min(3),
     description: zod_1.z.string().min(10),
@@ -69,7 +101,7 @@ router.get('/', async (req, res) => {
                 orderBy.createdAt = 'desc';
         }
         const [documents, total] = await Promise.all([
-            prisma.document.findMany({
+            index_1.prisma.document.findMany({
                 where,
                 orderBy,
                 skip,
@@ -87,7 +119,7 @@ router.get('/', async (req, res) => {
                     }
                 }
             }),
-            prisma.document.count({ where })
+            index_1.prisma.document.count({ where })
         ]);
         res.json({
             documents,
@@ -107,7 +139,7 @@ router.get('/', async (req, res) => {
 // Get featured documents
 router.get('/featured', async (req, res) => {
     try {
-        const documents = await prisma.document.findMany({
+        const documents = await index_1.prisma.document.findMany({
             where: { status: 'APPROVED', isFeatured: true },
             take: 8,
             include: {
@@ -130,7 +162,7 @@ router.get('/featured', async (req, res) => {
 // Get bestseller documents
 router.get('/bestsellers', async (req, res) => {
     try {
-        const documents = await prisma.document.findMany({
+        const documents = await index_1.prisma.document.findMany({
             where: { status: 'APPROVED', isBestseller: true },
             take: 8,
             include: {
@@ -154,7 +186,7 @@ router.get('/bestsellers', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id },
             include: {
                 seller: {
@@ -184,7 +216,7 @@ router.get('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Document not found' });
         }
         // Get related documents
-        const relatedDocuments = await prisma.document.findMany({
+        const relatedDocuments = await index_1.prisma.document.findMany({
             where: {
                 status: 'APPROVED',
                 category: document.category,
@@ -212,7 +244,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', auth_1.authenticate, auth_1.requireSeller, async (req, res) => {
     try {
         const data = createDocumentSchema.parse(req.body);
-        const document = await prisma.document.create({
+        const document = await index_1.prisma.document.create({
             data: {
                 ...data,
                 tags: JSON.stringify(data.tags),
@@ -229,6 +261,40 @@ router.post('/', auth_1.authenticate, auth_1.requireSeller, async (req, res) => 
                 }
             }
         });
+        // Notify all admins that a new document requires review
+        try {
+            const admins = await index_1.prisma.user.findMany({ where: { role: 'ADMIN' } });
+            if (admins && admins.length > 0) {
+                const notifications = admins.map(a => ({
+                    userId: a.id,
+                    title: 'New document pending approval',
+                    message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.`,
+                    type: 'document_review'
+                }));
+                await index_1.prisma.notification.createMany({ data: notifications });
+                // Emit real-time notifications to connected admins
+                try {
+                    const { getIo } = await Promise.resolve().then(() => __importStar(require('../socket')));
+                    const io = getIo();
+                    if (io) {
+                        admins.forEach(a => {
+                            io.to(a.id).emit('notification', {
+                                title: 'New document pending approval',
+                                message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.`,
+                                type: 'document_review',
+                                createdAt: new Date()
+                            });
+                        });
+                    }
+                }
+                catch (emitErr) {
+                    console.error('Failed to emit socket notifications to admins:', emitErr);
+                }
+            }
+        }
+        catch (notifyErr) {
+            console.error('Failed to create admin notifications for new document:', notifyErr);
+        }
         res.status(201).json({
             message: 'Document uploaded successfully. Pending approval.',
             document
@@ -246,7 +312,7 @@ router.post('/', auth_1.authenticate, auth_1.requireSeller, async (req, res) => 
 router.post('/admin/upload', auth_1.authenticate, auth_1.requireAdmin, async (req, res) => {
     try {
         const data = createDocumentSchema.parse(req.body);
-        const document = await prisma.document.create({
+        const document = await index_1.prisma.document.create({
             data: {
                 ...data,
                 tags: JSON.stringify(data.tags),
@@ -282,7 +348,7 @@ router.put('/:id', auth_1.authenticate, auth_1.requireSeller, async (req, res) =
         const { id } = req.params;
         const data = createDocumentSchema.partial().parse(req.body);
         // Check ownership
-        const existing = await prisma.document.findUnique({
+        const existing = await index_1.prisma.document.findUnique({
             where: { id }
         });
         if (!existing) {
@@ -291,7 +357,7 @@ router.put('/:id', auth_1.authenticate, auth_1.requireSeller, async (req, res) =
         if (existing.sellerId !== req.user.id && req.user.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized' });
         }
-        const document = await prisma.document.update({
+        const document = await index_1.prisma.document.update({
             where: { id },
             data: {
                 ...data,
@@ -311,13 +377,13 @@ router.put('/:id', auth_1.authenticate, auth_1.requireSeller, async (req, res) =
 router.patch('/:id/approve', auth_1.authenticate, auth_1.requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id }
         });
         if (!document) {
             return res.status(404).json({ error: 'Document not found' });
         }
-        const updated = await prisma.document.update({
+        const updated = await index_1.prisma.document.update({
             where: { id },
             data: { status: 'APPROVED' },
             include: {
@@ -326,6 +392,31 @@ router.patch('/:id/approve', auth_1.authenticate, auth_1.requireAdmin, async (re
                 }
             }
         });
+        // Notify seller that their document was approved
+        try {
+            const note = await index_1.prisma.notification.create({
+                data: {
+                    userId: updated.sellerId,
+                    title: 'Your document was approved',
+                    message: `Your document "${updated.title}" has been approved and published.`,
+                    type: 'document'
+                }
+            });
+            // Emit real-time notification to seller
+            try {
+                const { getIo } = await Promise.resolve().then(() => __importStar(require('../socket')));
+                const io = getIo();
+                if (io) {
+                    io.to(updated.sellerId).emit('notification', { ...note });
+                }
+            }
+            catch (emitErr) {
+                console.error('Failed to emit socket notification to seller:', emitErr);
+            }
+        }
+        catch (notifyErr) {
+            console.error('Failed to notify seller about approval:', notifyErr);
+        }
         res.json({
             message: 'Document approved and published',
             document: updated
@@ -341,13 +432,13 @@ router.patch('/:id/reject', auth_1.authenticate, auth_1.requireAdmin, async (req
     try {
         const { id } = req.params;
         const { reason } = req.body;
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id }
         });
         if (!document) {
             return res.status(404).json({ error: 'Document not found' });
         }
-        const updated = await prisma.document.update({
+        const updated = await index_1.prisma.document.update({
             where: { id },
             data: {
                 status: 'REJECTED',
@@ -359,6 +450,31 @@ router.patch('/:id/reject', auth_1.authenticate, auth_1.requireAdmin, async (req
                 }
             }
         });
+        // Notify seller that their document was rejected
+        try {
+            const note = await index_1.prisma.notification.create({
+                data: {
+                    userId: updated.sellerId,
+                    title: 'Your document was rejected',
+                    message: `Your document "${updated.title}" was rejected. Reason: ${reason || 'No reason provided'}.`,
+                    type: 'document'
+                }
+            });
+            // Emit real-time notification to seller
+            try {
+                const { getIo } = await Promise.resolve().then(() => __importStar(require('../socket')));
+                const io = getIo();
+                if (io) {
+                    io.to(updated.sellerId).emit('notification', { ...note });
+                }
+            }
+            catch (emitErr) {
+                console.error('Failed to emit socket notification to seller:', emitErr);
+            }
+        }
+        catch (notifyErr) {
+            console.error('Failed to notify seller about rejection:', notifyErr);
+        }
         res.json({
             message: 'Document rejected',
             document: updated
@@ -372,7 +488,7 @@ router.patch('/:id/reject', auth_1.authenticate, auth_1.requireAdmin, async (req
 // Get pending documents (admin only)
 router.get('/admin/pending', auth_1.authenticate, auth_1.requireAdmin, async (req, res) => {
     try {
-        const documents = await prisma.document.findMany({
+        const documents = await index_1.prisma.document.findMany({
             where: { status: 'PENDING' },
             include: {
                 seller: {
@@ -395,7 +511,7 @@ router.get('/admin/pending', auth_1.authenticate, auth_1.requireAdmin, async (re
 router.delete('/:id', auth_1.authenticate, auth_1.requireSeller, async (req, res) => {
     try {
         const { id } = req.params;
-        const existing = await prisma.document.findUnique({
+        const existing = await index_1.prisma.document.findUnique({
             where: { id }
         });
         if (!existing) {
@@ -404,7 +520,7 @@ router.delete('/:id', auth_1.authenticate, auth_1.requireSeller, async (req, res
         if (existing.sellerId !== req.user.id && req.user.role !== 'ADMIN') {
             return res.status(403).json({ error: 'Not authorized' });
         }
-        await prisma.document.delete({ where: { id } });
+        await index_1.prisma.document.delete({ where: { id } });
         res.json({ message: 'Document deleted' });
     }
     catch (error) {

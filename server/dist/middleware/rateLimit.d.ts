@@ -1,4 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-export declare const createRateLimiter: (windowMs?: number, maxRequests?: number) => (req: Request, res: Response, next: NextFunction) => void | Response<any, Record<string, any>>;
-export default createRateLimiter;
+export declare const apiLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const authLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const registerLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const paymentLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const uploadLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export default apiLimiter;
 //# sourceMappingURL=rateLimit.d.ts.map

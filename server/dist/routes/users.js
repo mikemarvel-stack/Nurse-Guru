@@ -2,10 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const updateProfileSchema = zod_1.z.object({
     name: zod_1.z.string().min(2).optional(),
     avatar: zod_1.z.string().url().optional()
@@ -13,7 +12,7 @@ const updateProfileSchema = zod_1.z.object({
 // Get current user profile
 router.get('/profile', auth_1.authenticate, async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
+        const user = await index_1.prisma.user.findUnique({
             where: { id: req.user.id },
             select: {
                 id: true,
@@ -44,7 +43,7 @@ router.get('/profile', auth_1.authenticate, async (req, res) => {
 router.put('/profile', auth_1.authenticate, async (req, res) => {
     try {
         const data = updateProfileSchema.parse(req.body);
-        const user = await prisma.user.update({
+        const user = await index_1.prisma.user.update({
             where: { id: req.user.id },
             data,
             select: {
@@ -69,7 +68,7 @@ router.put('/profile', auth_1.authenticate, async (req, res) => {
 // Get user's documents (for seller dashboard)
 router.get('/my-documents', auth_1.authenticate, async (req, res) => {
     try {
-        const documents = await prisma.document.findMany({
+        const documents = await index_1.prisma.document.findMany({
             where: { sellerId: req.user.id },
             orderBy: { createdAt: 'desc' },
             include: {
@@ -88,16 +87,16 @@ router.get('/my-documents', auth_1.authenticate, async (req, res) => {
 router.get('/stats', auth_1.authenticate, async (req, res) => {
     try {
         const [documentCount, orderCount, totalSales] = await Promise.all([
-            prisma.document.count({
+            index_1.prisma.document.count({
                 where: { sellerId: req.user.id }
             }),
-            prisma.order.count({
+            index_1.prisma.order.count({
                 where: {
                     document: { sellerId: req.user.id },
                     status: 'COMPLETED'
                 }
             }),
-            prisma.order.aggregate({
+            index_1.prisma.order.aggregate({
                 where: {
                     document: { sellerId: req.user.id },
                     status: 'COMPLETED'
@@ -120,7 +119,7 @@ router.get('/stats', auth_1.authenticate, async (req, res) => {
 // Become a seller
 router.post('/become-seller', auth_1.authenticate, async (req, res) => {
     try {
-        const user = await prisma.user.update({
+        const user = await index_1.prisma.user.update({
             where: { id: req.user.id },
             data: { role: 'SELLER' },
             select: {

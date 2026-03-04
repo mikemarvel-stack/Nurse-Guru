@@ -7,10 +7,9 @@ const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const resetRequestSchema = zod_1.z.object({
     email: zod_1.z.string().email()
 });
@@ -34,7 +33,7 @@ const changePasswordSchema = zod_1.z.object({
 router.post('/forgot', async (req, res) => {
     try {
         const { email } = resetRequestSchema.parse(req.body);
-        const user = await prisma.user.findUnique({
+        const user = await index_1.prisma.user.findUnique({
             where: { email }
         });
         // Don't reveal if email exists (security best practice)
@@ -48,7 +47,7 @@ router.post('/forgot', async (req, res) => {
         const resetTokenHash = crypto_1.default.createHash('sha256').update(resetToken).digest('hex');
         const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
         // Save reset token to database
-        await prisma.user.update({
+        await index_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 resetToken: resetTokenHash,
@@ -74,7 +73,7 @@ router.post('/reset', async (req, res) => {
     try {
         const { token, password, confirmPassword } = resetPasswordSchema.parse(req.body);
         const resetTokenHash = crypto_1.default.createHash('sha256').update(token).digest('hex');
-        const user = await prisma.user.findFirst({
+        const user = await index_1.prisma.user.findFirst({
             where: {
                 resetToken: resetTokenHash,
                 resetTokenExpiry: {
@@ -88,7 +87,7 @@ router.post('/reset', async (req, res) => {
         // Hash new password
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         // Update password and clear reset token
-        await prisma.user.update({
+        await index_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 password: hashedPassword,
@@ -110,7 +109,7 @@ router.post('/reset', async (req, res) => {
 router.post('/change', auth_1.authenticate, async (req, res) => {
     try {
         const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
-        const user = await prisma.user.findUnique({
+        const user = await index_1.prisma.user.findUnique({
             where: { id: req.user.id }
         });
         if (!user) {
@@ -124,7 +123,7 @@ router.post('/change', auth_1.authenticate, async (req, res) => {
         // Hash new password
         const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
         // Update password
-        await prisma.user.update({
+        await index_1.prisma.user.update({
             where: { id: user.id },
             data: { password: hashedPassword }
         });

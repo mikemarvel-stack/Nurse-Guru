@@ -2,10 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const createReviewSchema = zod_1.z.object({
     documentId: zod_1.z.string(),
     rating: zod_1.z.number().min(1).max(5),
@@ -20,14 +19,14 @@ router.post('/', auth_1.authenticate, async (req, res) => {
     try {
         const { documentId, rating, comment } = createReviewSchema.parse(req.body);
         // Check if document exists
-        const document = await prisma.document.findUnique({
+        const document = await index_1.prisma.document.findUnique({
             where: { id: documentId }
         });
         if (!document) {
             return res.status(404).json({ error: 'Document not found' });
         }
         // Check if user has purchased this document
-        const order = await prisma.order.findFirst({
+        const order = await index_1.prisma.order.findFirst({
             where: {
                 buyerId: req.user.id,
                 documentId,
@@ -38,7 +37,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
             return res.status(403).json({ error: 'You must purchase the document before reviewing it' });
         }
         // Check if user already reviewed
-        const existingReview = await prisma.review.findFirst({
+        const existingReview = await index_1.prisma.review.findFirst({
             where: {
                 documentId,
                 userId: req.user.id
@@ -48,7 +47,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
             return res.status(400).json({ error: 'You have already reviewed this document' });
         }
         // Create review
-        const review = await prisma.review.create({
+        const review = await index_1.prisma.review.create({
             data: {
                 documentId,
                 userId: req.user.id,
@@ -66,11 +65,11 @@ router.post('/', auth_1.authenticate, async (req, res) => {
             }
         });
         // Update document rating average
-        const reviews = await prisma.review.findMany({
+        const reviews = await index_1.prisma.review.findMany({
             where: { documentId }
         });
         const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-        await prisma.document.update({
+        await index_1.prisma.document.update({
             where: { id: documentId },
             data: { rating: averageRating }
         });
@@ -90,7 +89,7 @@ router.post('/', auth_1.authenticate, async (req, res) => {
 // Get reviews for a document
 router.get('/document/:documentId', async (req, res) => {
     try {
-        const reviews = await prisma.review.findMany({
+        const reviews = await index_1.prisma.review.findMany({
             where: { documentId: req.params.documentId },
             include: {
                 user: {
@@ -112,7 +111,7 @@ router.get('/document/:documentId', async (req, res) => {
 // Get user's reviews
 router.get('/user/reviews', auth_1.authenticate, async (req, res) => {
     try {
-        const reviews = await prisma.review.findMany({
+        const reviews = await index_1.prisma.review.findMany({
             where: { userId: req.user.id },
             include: {
                 document: {
@@ -136,7 +135,7 @@ router.put('/:reviewId', auth_1.authenticate, async (req, res) => {
     try {
         const { rating, comment } = updateReviewSchema.parse(req.body);
         // Check if review exists and is owned by user
-        const review = await prisma.review.findUnique({
+        const review = await index_1.prisma.review.findUnique({
             where: { id: req.params.reviewId }
         });
         if (!review) {
@@ -146,7 +145,7 @@ router.put('/:reviewId', auth_1.authenticate, async (req, res) => {
             return res.status(403).json({ error: 'You can only edit your own reviews' });
         }
         // Update review
-        const updatedReview = await prisma.review.update({
+        const updatedReview = await index_1.prisma.review.update({
             where: { id: req.params.reviewId },
             data: {
                 ...(rating && { rating }),
@@ -174,7 +173,7 @@ router.put('/:reviewId', auth_1.authenticate, async (req, res) => {
 // Delete review
 router.delete('/:reviewId', auth_1.authenticate, async (req, res) => {
     try {
-        const review = await prisma.review.findUnique({
+        const review = await index_1.prisma.review.findUnique({
             where: { id: req.params.reviewId }
         });
         if (!review) {
@@ -183,7 +182,7 @@ router.delete('/:reviewId', auth_1.authenticate, async (req, res) => {
         if (review.userId !== req.user.id) {
             return res.status(403).json({ error: 'You can only delete your own reviews' });
         }
-        await prisma.review.delete({
+        await index_1.prisma.review.delete({
             where: { id: req.params.reviewId }
         });
         res.json({ message: 'Review deleted' });

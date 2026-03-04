@@ -6,7 +6,6 @@ import {
   User, 
   Menu, 
   X, 
-  HeartPulse, 
   Upload,
   LogOut,
   ChevronDown,

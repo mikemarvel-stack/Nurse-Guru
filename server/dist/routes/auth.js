@@ -7,9 +7,8 @@ const express_1 = require("express");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const index_1 = require("../index");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const registerSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(8),
@@ -25,7 +24,7 @@ router.post('/register', async (req, res) => {
     try {
         const { email, password, name, role } = registerSchema.parse(req.body);
         // Check if user exists
-        const existingUser = await prisma.user.findUnique({
+        const existingUser = await index_1.prisma.user.findUnique({
             where: { email }
         });
         if (existingUser) {
@@ -34,7 +33,7 @@ router.post('/register', async (req, res) => {
         // Hash password
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         // Create user
-        const user = await prisma.user.create({
+        const user = await index_1.prisma.user.create({
             data: {
                 email,
                 password: hashedPassword,
@@ -73,7 +72,7 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = loginSchema.parse(req.body);
         // Find user
-        const user = await prisma.user.findUnique({
+        const user = await index_1.prisma.user.findUnique({
             where: { email }
         });
         if (!user) {
@@ -85,7 +84,7 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
         // Generate JWT
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'default-dev-secret', { expiresIn: '7d' });
         res.json({
             message: 'Login successful',
             user: {
@@ -115,8 +114,8 @@ router.get('/me', async (req, res) => {
         if (!token) {
             return res.status(401).json({ error: 'Not authenticated' });
         }
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        const user = await prisma.user.findUnique({
+        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET || 'default-dev-secret');
+        const user = await index_1.prisma.user.findUnique({
             where: { id: decoded.userId },
             select: {
                 id: true,

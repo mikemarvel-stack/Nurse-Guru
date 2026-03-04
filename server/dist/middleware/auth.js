@@ -5,41 +5,57 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAdmin = exports.requireSeller = exports.authenticate = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const index_1 = require("../index");
+const errors_1 = require("../utils/errors");
+const logger_1 = __importDefault(require("../utils/logger"));
 const authenticate = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (!token) {
-            return res.status(401).json({ error: 'Authentication required' });
+            throw new errors_1.UnauthorizedError('Authentication required');
         }
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret || jwtSecret.length < 32) {
+            logger_1.default.error('JWT_SECRET is not properly configured');
+            throw new Error('Server configuration error');
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, jwtSecret);
         // Verify user still exists
-        const user = await prisma.user.findUnique({
+        const user = await index_1.prisma.user.findUnique({
             where: { id: decoded.userId },
             select: { id: true, email: true, role: true }
         });
         if (!user) {
-            return res.status(401).json({ error: 'User not found' });
+            throw new errors_1.UnauthorizedError('User not found');
         }
         req.user = user;
         next();
     }
     catch (error) {
-        return res.status(401).json({ error: 'Invalid token' });
+        if (error instanceof jsonwebtoken_1.default.JsonWebTokenError) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+        if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
+            return res.status(401).json({ error: 'Token expired' });
+        }
+        if (error instanceof errors_1.UnauthorizedError) {
+            return res.status(401).json({ error: error.message });
+        }
+        logger_1.default.error('Authentication error:', error);
+        return res.status(500).json({ error: 'Authentication failed' });
     }
 };
 exports.authenticate = authenticate;
 const requireSeller = (req, res, next) => {
     if (req.user?.role !== 'SELLER' && req.user?.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'Seller access required' });
+        throw new errors_1.ForbiddenError('Seller access required');
     }
     next();
 };
 exports.requireSeller = requireSeller;
 const requireAdmin = (req, res, next) => {
     if (req.user?.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'Admin access required' });
+        throw new errors_1.ForbiddenError('Admin access required');
     }
     next();
 };
