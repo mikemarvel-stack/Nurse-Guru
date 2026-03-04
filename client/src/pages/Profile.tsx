@@ -130,10 +130,10 @@ export function Profile() {
               <CardContent className="pt-6">
                 <FileText className="h-8 w-8 text-teal-600 mb-2" />
                 <div className="text-3xl font-bold text-gray-900">
-                  {user?.role === 'seller' ? user?.totalSales || 0 : user?.totalPurchases || 0}
+                  {user?.role?.toUpperCase() === 'SELLER' ? user?.totalSales || 0 : user?.totalPurchases || 0}
                 </div>
                 <p className="text-gray-600 text-sm mt-1">
-                  {user?.role === 'seller' ? 'Documents Sold' : 'Documents Purchased'}
+                  {user?.role?.toUpperCase() === 'SELLER' ? 'Documents Sold' : 'Documents Purchased'}
                 </p>
               </CardContent>
             </Card>
@@ -145,7 +145,7 @@ export function Profile() {
                   ${(user?.balance || 0).toFixed(2)}
                 </div>
                 <p className="text-gray-600 text-sm mt-1">
-                  {user?.role === 'seller' ? 'Earnings' : 'Account Balance'}
+                  {user?.role?.toUpperCase() === 'SELLER' ? 'Earnings' : 'Account Balance'}
                 </p>
               </CardContent>
             </Card>
@@ -154,7 +154,7 @@ export function Profile() {
               <CardContent className="pt-6">
                 <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center mb-2">
                   <span className="text-lg font-bold text-teal-600">
-                    {user?.role === 'seller' ? 'S' : 'B'}
+                    {user?.role?.toUpperCase() === 'SELLER' ? 'S' : 'B'}
                   </span>
                 </div>
                 <div className="text-lg font-bold text-gray-900 capitalize">
@@ -171,7 +171,7 @@ export function Profile() {
               <CardTitle>Account Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {user?.role === 'buyer' && (
+              {user?.role?.toUpperCase() === 'BUYER' && (
                 <Button variant="outline" className="w-full text-left justify-start">
                   Upgrade to Seller
                 </Button>

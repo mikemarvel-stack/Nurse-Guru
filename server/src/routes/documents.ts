@@ -250,6 +250,23 @@ router.post('/', authenticate, requireSeller, async (req: AuthRequest, res) => {
       }
     });
 
+    // Notify all admins that a new document requires review
+    try {
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      if (admins && admins.length > 0) {
+        const notifications = admins.map(a => ({
+          userId: a.id,
+          title: 'New document pending approval',
+          message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.`,
+          type: 'document_review'
+        }));
+
+        await prisma.notification.createMany({ data: notifications });
+      }
+    } catch (notifyErr) {
+      console.error('Failed to create admin notifications for new document:', notifyErr);
+    }
+
     res.status(201).json({
       message: 'Document uploaded successfully. Pending approval.',
       document
@@ -358,6 +375,20 @@ router.patch('/:id/approve', authenticate, requireAdmin, async (req: AuthRequest
       }
     });
 
+    // Notify seller that their document was approved
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: updated.sellerId,
+          title: 'Your document was approved',
+          message: `Your document "${updated.title}" has been approved and published.`,
+          type: 'document'
+        }
+      });
+    } catch (notifyErr) {
+      console.error('Failed to notify seller about approval:', notifyErr);
+    }
+
     res.json({
       message: 'Document approved and published',
       document: updated
@@ -394,6 +425,20 @@ router.patch('/:id/reject', authenticate, requireAdmin, async (req: AuthRequest,
         }
       }
     });
+
+    // Notify seller that their document was rejected
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: updated.sellerId,
+          title: 'Your document was rejected',
+          message: `Your document "${updated.title}" was rejected. Reason: ${reason || 'No reason provided'}.`,
+          type: 'document'
+        }
+      });
+    } catch (notifyErr) {
+      console.error('Failed to notify seller about rejection:', notifyErr);
+    }
 
     res.json({
       message: 'Document rejected',

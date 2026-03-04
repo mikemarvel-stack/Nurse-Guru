@@ -3,6 +3,7 @@ export { useDocumentStore } from './apiStore';
 export { useOrderStore } from './apiStore';
 export { useCartStore } from './apiStore';
 export { usePaymentStore } from './apiStore';
+export { useNotificationStore } from './notificationStore';
 
 // Constants for filters
 export const documentCategories = [

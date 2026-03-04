@@ -411,7 +411,7 @@ export function Home() {
       </section>
 
       {/* Become a Seller CTA */}
-      {!isAuthenticated || user?.role === 'buyer' ? (
+      {!isAuthenticated || user?.role?.toUpperCase() === 'BUYER' ? (
         <section className="relative overflow-hidden bg-gradient-to-r from-teal-600 to-emerald-600 py-20">
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5" />

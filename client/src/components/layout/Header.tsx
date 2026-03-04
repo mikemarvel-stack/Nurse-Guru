@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import NotificationCenter from '@/components/NotificationCenter';
 import { useAuthStore, useCartStore, useDocumentStore } from '@/store';
 
 export function Header() {
@@ -107,6 +108,7 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            <NotificationCenter />
             {/* Cart */}
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative hover:bg-teal-50">

@@ -30,6 +30,23 @@ router.post('/', async (req, res) => {
     // TODO: Send notification email to admin
     console.log(`New contact message from ${data.email}: ${data.subject}`);
 
+    // Create admin notifications for new contact message
+    try {
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      if (admins && admins.length > 0) {
+        const notifications = admins.map(a => ({
+          userId: a.id,
+          title: 'New contact message',
+          message: `Contact from ${data.name} <${data.email}>: ${data.subject}`,
+          type: 'contact'
+        }));
+
+        await prisma.notification.createMany({ data: notifications });
+      }
+    } catch (notifyErr) {
+      console.error('Failed to create admin notifications for contact message:', notifyErr);
+    }
+
     res.status(201).json({
       message: 'Thank you for your message. We will get back to you soon.',
       contactId: contact.id

@@ -167,4 +167,13 @@ export const userApi = {
     api.post('/users/become-seller')
 };
 
+// Notifications API
+export const notificationsApi = {
+  get: (params?: Record<string, any>) => api.get('/notifications', { params }),
+  markRead: (id: string) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
+  create: (data: { userId: string; title: string; message: string; type?: string }) => api.post('/notifications', data),
+  delete: (id: string) => api.delete(`/notifications/${id}`)
+};
+
 export default api;
