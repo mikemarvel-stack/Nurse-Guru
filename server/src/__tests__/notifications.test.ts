@@ -1,23 +1,62 @@
 import request from 'supertest';
-import express from 'express';
+import express, { Express, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../index';
 import notificationsRouter from '../routes/notifications';
-import { authenticate } from '../middleware/auth';
 
-// Create a test app
-const app = express();
-app.use(express.json());
-app.use(authenticate);
-app.use('/api/notifications', notificationsRouter);
+// Create a test app that doesn't try to listen on a port
+const createTestApp = (): Express => {
+  const app = express();
+  app.use(express.json());
+
+  // Manual authentication middleware for testing
+  app.use(async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const token = req.headers.authorization?.replace('Bearer ', '');
+
+      if (!token) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-dev-secret') as {
+        userId: string;
+        email: string;
+        role: string;
+        iat: number;
+        exp: number;
+      };
+
+      // Get user from database
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, email: true, role: true }
+      });
+
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+  });
+
+  app.use('/api/notifications', notificationsRouter);
+  return app;
+};
 
 describe('Notifications API', () => {
+  let app: Express;
   let adminUserId: string;
   let sellerUserId: string;
   let adminToken: string;
   let sellerToken: string;
 
   beforeAll(async () => {
+    app = createTestApp();
+
     // Create test users
     const admin = await prisma.user.create({
       data: {
@@ -56,7 +95,6 @@ describe('Notifications API', () => {
   afterEach(async () => {
     // Clean notifications between tests but keep users
     await prisma.notification.deleteMany({});
-  });
   });
 
   describe('GET /api/notifications', () => {
