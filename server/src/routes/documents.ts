@@ -262,6 +262,24 @@ router.post('/', authenticate, requireSeller, async (req: AuthRequest, res) => {
         }));
 
         await prisma.notification.createMany({ data: notifications });
+
+        // Emit real-time notifications to connected admins
+        try {
+          const { getIo } = await import('../socket');
+          const io = getIo();
+          if (io) {
+            admins.forEach(a => {
+              io.to(a.id).emit('notification', {
+                title: 'New document pending approval',
+                message: `Document "${document.title}" uploaded by ${document.seller.name} is pending review.",
+                type: 'document_review',
+                createdAt: new Date()
+              });
+            });
+          }
+        } catch (emitErr) {
+          console.error('Failed to emit socket notifications to admins:', emitErr);
+        }
       }
     } catch (notifyErr) {
       console.error('Failed to create admin notifications for new document:', notifyErr);
@@ -377,7 +395,7 @@ router.patch('/:id/approve', authenticate, requireAdmin, async (req: AuthRequest
 
     // Notify seller that their document was approved
     try {
-      await prisma.notification.create({
+      const note = await prisma.notification.create({
         data: {
           userId: updated.sellerId,
           title: 'Your document was approved',
@@ -385,6 +403,17 @@ router.patch('/:id/approve', authenticate, requireAdmin, async (req: AuthRequest
           type: 'document'
         }
       });
+
+      // Emit real-time notification to seller
+      try {
+        const { getIo } = await import('../socket');
+        const io = getIo();
+        if (io) {
+          io.to(updated.sellerId).emit('notification', { ...note });
+        }
+      } catch (emitErr) {
+        console.error('Failed to emit socket notification to seller:', emitErr);
+      }
     } catch (notifyErr) {
       console.error('Failed to notify seller about approval:', notifyErr);
     }
@@ -428,7 +457,7 @@ router.patch('/:id/reject', authenticate, requireAdmin, async (req: AuthRequest,
 
     // Notify seller that their document was rejected
     try {
-      await prisma.notification.create({
+      const note = await prisma.notification.create({
         data: {
           userId: updated.sellerId,
           title: 'Your document was rejected',
@@ -436,6 +465,17 @@ router.patch('/:id/reject', authenticate, requireAdmin, async (req: AuthRequest,
           type: 'document'
         }
       });
+
+      // Emit real-time notification to seller
+      try {
+        const { getIo } = await import('../socket');
+        const io = getIo();
+        if (io) {
+          io.to(updated.sellerId).emit('notification', { ...note });
+        }
+      } catch (emitErr) {
+        console.error('Failed to emit socket notification to seller:', emitErr);
+      }
     } catch (notifyErr) {
       console.error('Failed to notify seller about rejection:', notifyErr);
     }

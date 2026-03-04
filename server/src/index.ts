@@ -21,6 +21,9 @@ import webhooksRoutes from './routes/webhooks';
 import { sanitizeInput } from './middleware/sanitize';
 import createRateLimiter from './middleware/rateLimit';
 
+import http from 'http';
+import { initSocket } from './socket';
+
 dotenv.config();
 
 const app = express();
@@ -93,7 +96,10 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+const io = initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../../uploads')}`);
 });

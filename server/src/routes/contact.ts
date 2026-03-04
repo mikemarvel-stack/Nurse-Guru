@@ -42,6 +42,24 @@ router.post('/', async (req, res) => {
         }));
 
         await prisma.notification.createMany({ data: notifications });
+
+        // Emit real-time notifications to connected admins
+        try {
+          const { getIo } = await import('../socket');
+          const io = getIo();
+          if (io) {
+            admins.forEach(a => {
+              io.to(a.id).emit('notification', {
+                title: 'New contact message',
+                message: `Contact from ${data.name} <${data.email}>: ${data.subject}`,
+                type: 'contact',
+                createdAt: new Date()
+              });
+            });
+          }
+        } catch (emitErr) {
+          console.error('Failed to emit socket notifications for contact message:', emitErr);
+        }
       }
     } catch (notifyErr) {
       console.error('Failed to create admin notifications for contact message:', notifyErr);
