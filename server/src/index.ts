@@ -53,6 +53,8 @@ app.use((req, res, next) => {
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+// Serve repo-level public assets (logo, favicon) so client can reference them during dev
+app.use('/public', express.static(path.join(__dirname, '../../public')));
 
 // Health check
 app.get('/api/health', (req, res) => {

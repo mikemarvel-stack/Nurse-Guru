@@ -53,9 +53,11 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 shadow-lg shadow-teal-200">
-              <HeartPulse className="h-6 w-6 text-white" />
-            </div>
+            <img
+              src="http://localhost:3001/public/nurse_guru_logo.png"
+              alt="Nurse Guru"
+              className="h-10 w-10 rounded-lg object-cover"
+            />
             <div className="hidden flex-col sm:flex">
               <span className="text-xl font-bold leading-tight text-gray-900">
                 Nurse Guru
@@ -93,11 +95,11 @@ export function Header() {
               </Button>
             </Link>
             
-            {isAuthenticated && user?.role === 'seller' && (
+            {isAuthenticated && (user?.role?.toUpperCase() === 'SELLER' || user?.role?.toUpperCase() === 'ADMIN') && (
               <Link to="/seller">
                 <Button variant="ghost" className="text-gray-700 hover:text-teal-600 hover:bg-teal-50">
                   <Upload className="mr-2 h-4 w-4" />
-                  Sell
+                  Upload
                 </Button>
               </Link>
             )}
@@ -145,10 +147,10 @@ export function Header() {
                     <BookOpen className="mr-2 h-4 w-4" />
                     My Downloads
                   </DropdownMenuItem>
-                  {user?.role === 'seller' && (
+                  {(user?.role?.toUpperCase() === 'SELLER' || user?.role?.toUpperCase() === 'ADMIN') && (
                     <DropdownMenuItem onClick={() => navigate('/seller')}>
                       <Upload className="mr-2 h-4 w-4" />
-                      Seller Dashboard
+                      Dashboard
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
@@ -214,11 +216,11 @@ export function Header() {
                   Categories
                 </Button>
               </Link>
-              {isAuthenticated && user?.role === 'seller' && (
+              {isAuthenticated && (user?.role?.toUpperCase() === 'SELLER' || user?.role?.toUpperCase() === 'ADMIN') && (
                 <Link to="/seller" onClick={() => setIsMenuOpen(false)}>
                   <Button variant="ghost" className="w-full justify-start hover:bg-teal-50">
                     <Upload className="mr-2 h-4 w-4" />
-                    Sell
+                    Upload
                   </Button>
                 </Link>
               )}
