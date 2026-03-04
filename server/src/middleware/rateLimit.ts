@@ -1,51 +1,50 @@
-import { Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
+import { Request, Response } from 'express';
 
-interface RateLimitStore {
-  [key: string]: { count: number; resetTime: number };
-}
+// General API rate limiter
+export const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-const store: RateLimitStore = {};
+// Strict rate limiter for authentication endpoints
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes
+  message: { error: 'Too many login attempts, please try again later' },
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-export const createRateLimiter = (windowMs = 15 * 60 * 1000, maxRequests = 100) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip || 'unknown';
-    const now = Date.now();
+// Rate limiter for registration
+export const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 registrations per hour per IP
+  message: { error: 'Too many accounts created, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-    if (!store[key]) {
-      store[key] = { count: 1, resetTime: now + windowMs };
-      return next();
-    }
+// Rate limiter for payment endpoints
+export const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: { error: 'Too many payment requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-    if (now > store[key].resetTime) {
-      store[key] = { count: 1, resetTime: now + windowMs };
-      return next();
-    }
+// Rate limiter for file uploads
+export const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
+  message: { error: 'Too many upload requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-    store[key].count++;
-
-    if (store[key].count > maxRequests) {
-      return res.status(429).json({
-        error: 'Too many requests, please try again later',
-        retryAfter: Math.ceil((store[key].resetTime - now) / 1000)
-      });
-    }
-
-    res.set('X-RateLimit-Limit', maxRequests.toString());
-    res.set('X-RateLimit-Remaining', (maxRequests - store[key].count).toString());
-    res.set('X-RateLimit-Reset', store[key].resetTime.toString());
-
-    next();
-  };
-};
-
-// Cleanup old entries every hour
-setInterval(() => {
-  const now = Date.now();
-  Object.keys(store).forEach(key => {
-    if (store[key].resetTime < now) {
-      delete store[key];
-    }
-  });
-}, 60 * 60 * 1000);
-
-export default createRateLimiter;
+export default apiLimiter;

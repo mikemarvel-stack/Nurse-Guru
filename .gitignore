@@ -5,10 +5,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-lock.yaml
 
-# Environment
+# Environment - NEVER COMMIT
 .env
 .env.local
-.env.*
+.env.*.local
+.env.production
+.env.development
+server/.env
+client/.env
 
 # Build outputs
 dist/
@@ -37,17 +41,31 @@ logs/
 uploads/
 public/uploads/
 
+# Database - NEVER COMMIT
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+server/prisma/*.db
+server/prisma/*.db-journal
+data/
+
 # Generated files
 *.tgz
 
-# Implementation / planning docs (ignore during development)
+# Implementation / planning docs
 PROJECT_STATUS.md
 IMPLEMENTATION_SUMMARY.md
 FINAL_CHECKLIST.md
 ADMIN_GUIDE.md
 PROJECT_SETUP_COMPLETE.md
+AUDIT_REPORT.md
+
+# Backups
+backups/
+*.backup
 
 # Misc
 *.sql
-*.sqlite
-*.db
+.nojekyll
+build.log

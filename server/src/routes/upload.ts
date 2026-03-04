@@ -4,6 +4,8 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate, requireSeller } from '../middleware/auth';
 import fs from 'fs';
+import logger from '../utils/logger';
+import { ValidationError } from '../utils/errors';
 
 const router = Router();
 
@@ -13,13 +15,22 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Sanitize filename to prevent path traversal
+const sanitizeFilename = (filename: string): string => {
+  return filename
+    .replace(/[^a-zA-Z0-9.-]/g, '_')
+    .replace(/\.{2,}/g, '.')
+    .substring(0, 255);
+};
+
 // Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}-${file.originalname}`;
+    const sanitized = sanitizeFilename(file.originalname);
+    const uniqueName = `${uuidv4()}-${sanitized}`;
     cb(null, uniqueName);
   }
 });
@@ -82,7 +93,7 @@ const upload = multer({
 router.post('/document', authenticate, requireSeller, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      throw new ValidationError('No file uploaded');
     }
 
     const fileInfo = {
@@ -93,12 +104,14 @@ router.post('/document', authenticate, requireSeller, upload.single('file'), asy
       url: `/uploads/${req.file.filename}`
     };
 
+    logger.info('File uploaded', { userId: (req as any).user?.id, filename: req.file.filename });
+
     res.json({
       message: 'File uploaded successfully',
       file: fileInfo
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload file' });
   }
 });
@@ -107,32 +120,57 @@ router.post('/document', authenticate, requireSeller, upload.single('file'), asy
 router.post('/thumbnail', authenticate, upload.single('thumbnail'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No image uploaded' });
+      throw new ValidationError('No image uploaded');
     }
+
+    logger.info('Thumbnail uploaded', { userId: (req as any).user?.id, filename: req.file.filename });
 
     res.json({
       message: 'Thumbnail uploaded successfully',
       url: `/uploads/${req.file.filename}`
     });
   } catch (error) {
+    logger.error('Thumbnail upload error:', error);
     res.status(500).json({ error: 'Failed to upload thumbnail' });
   }
 });
 
-// Delete uploaded file
+// Delete uploaded file - SECURED
 router.delete('/:filename', authenticate, async (req, res) => {
   try {
     const { filename } = req.params;
-    const filePath = path.join(uploadsDir, filename);
+
+    // Prevent path traversal attacks
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      throw new ValidationError('Invalid filename');
+    }
+
+    // Use basename to ensure we only get the filename
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(uploadsDir, safeFilename);
+
+    // Verify the resolved path is still within uploads directory
+    const resolvedPath = path.resolve(filePath);
+    const resolvedUploadsDir = path.resolve(uploadsDir);
+    
+    if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+      throw new ValidationError('Invalid file path');
+    }
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+      logger.info('File deleted', { userId: (req as any).user?.id, filename: safeFilename });
       res.json({ message: 'File deleted' });
     } else {
       res.status(404).json({ error: 'File not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete file' });
+    logger.error('Delete file error:', error);
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to delete file' });
+    }
   }
 });
 

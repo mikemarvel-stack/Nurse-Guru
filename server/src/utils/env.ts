@@ -1,53 +1,28 @@
-import dotenv from 'dotenv';
+import { z } from 'zod';
 
-dotenv.config();
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  PORT: z.string().transform(Number).default('3001'),
+  FRONTEND_URL: z.string().url().optional()
+});
 
-const requiredEnvVars = [
-  'JWT_SECRET',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_PUBLISHABLE_KEY'
-];
-
-const optionalEnvVars = [
-  'PORT',
-  'NODE_ENV',
-  'FRONTEND_URL'
-];
-
-export const validateEnvironment = () => {
-  const missingVars: string[] = [];
-
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      missingVars.push(envVar);
+export const validateEnv = () => {
+  try {
+    return envSchema.parse(process.env);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error('❌ Environment validation failed:');
+      error.errors.forEach(err => {
+        console.error(`  - ${err.path.join('.')}: ${err.message}`);
+      });
+      process.exit(1);
     }
+    throw error;
   }
-
-  if (missingVars.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missingVars.forEach(v => console.error(`   - ${v}`));
-    process.exit(1);
-  }
-
-  // Log optional vars that are not set
-  const unsetOptional = optionalEnvVars.filter(v => !process.env[v]);
-  if (unsetOptional.length > 0) {
-    console.warn('⚠️  Using default values for optional environment variables:');
-    unsetOptional.forEach(v => console.warn(`   - ${v} (using default)`));
-  }
-
-  console.log('✅ Environment variables validated');
 };
 
-export const getEnv = (key: string, defaultValue?: string): string => {
-  const value = process.env[key];
-  if (!value && !defaultValue) {
-    throw new Error(`Environment variable ${key} is not set`);
-  }
-  return value || defaultValue || '';
-};
-
-export default {
-  validateEnvironment,
-  getEnv
-};
+export type Env = z.infer<typeof envSchema>;

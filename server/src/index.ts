@@ -2,7 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import helmet from 'helmet';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { PrismaClient } from '@prisma/client';
+import http from 'http';
+
+import { validateEnv } from './utils/env';
+import logger from './utils/logger';
+import { requestId } from './middleware/requestId';
+import { timeout } from './middleware/timeout';
+import { apiLimiter, authLimiter, registerLimiter, paymentLimiter, uploadLimiter } from './middleware/rateLimit';
+import { sanitizeInput } from './middleware/sanitize';
+import { initSocket } from './socket';
 
 import authRoutes from './routes/auth';
 import passwordRoutes from './routes/password';
@@ -18,98 +30,149 @@ import reviewsRoutes from './routes/reviews';
 import analyticsRoutes from './routes/analytics';
 import notificationsRoutes from './routes/notifications';
 import webhooksRoutes from './routes/webhooks';
-import { sanitizeInput } from './middleware/sanitize';
-import createRateLimiter from './middleware/rateLimit';
-
-import http from 'http';
-import { initSocket } from './socket';
 
 dotenv.config();
 
+// Validate environment variables
+const env = validateEnv();
+
 const app = express();
-export const prisma = new PrismaClient();
+export const prisma = new PrismaClient({
+  log: env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+});
 
-if (!process.env.JWT_SECRET) {
-  console.warn(
-    '⚠️  JWT_SECRET not provided in environment variables. ' +
-    'Using a default secret for development. ' +
-    'Set JWT_SECRET in .env for production!'
-  );
-}
-
-// Trust proxy
+// Trust proxy for rate limiting and security headers
 app.set('trust proxy', 1);
 
-// Middleware
+// Security: Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+}));
+
+// Compression
+app.use(compression());
+
+// CORS
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
 
-// Security: Rate limiting
-app.use(createRateLimiter(15 * 60 * 1000, 100)); // 100 requests per 15 minutes
+// Request ID tracking
+app.use(requestId);
 
-// Security: Input sanitization
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Request timeout
+app.use(timeout(30000));
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Input sanitization
 app.use(sanitizeInput);
-
-// Security: Headers
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  next();
-});
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
-// Serve repo-level public assets (logo, favicon) so client can reference them during dev
 app.use('/public', express.static(path.join(__dirname, '../../public')));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: env.NODE_ENV
+  });
 });
 
-// API Routes
+// API Routes with rate limiting
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/password', passwordRoutes);
 app.use('/api/email-verification', emailVerificationRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/payment', paymentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/contact', contactRoutes);
-app.use('/api/reviews', reviewsRoutes);
-app.use('/api/search', analyticsRoutes);
-app.use('/api/notifications', notificationsRoutes);
+app.use('/api/documents', apiLimiter, documentRoutes);
+app.use('/api/orders', apiLimiter, orderRoutes);
+app.use('/api/cart', apiLimiter, cartRoutes);
+app.use('/api/upload', uploadLimiter, uploadRoutes);
+app.use('/api/payment', paymentLimiter, paymentRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
+app.use('/api/contact', apiLimiter, contactRoutes);
+app.use('/api/reviews', apiLimiter, reviewsRoutes);
+app.use('/api/search', apiLimiter, analyticsRoutes);
+app.use('/api/notifications', apiLimiter, notificationsRoutes);
 app.use('/api/webhooks', webhooksRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  logger.error('Error:', {
+    error: err.message,
+    stack: err.stack,
+    requestId: req.id,
+    path: req.path,
+    method: req.method
+  });
+
+  const statusCode = err.statusCode || 500;
+  const message = err.isOperational ? err.message : 'Internal server error';
+
+  res.status(statusCode).json({
+    error: message,
+    requestId: req.id,
+    ...(env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Not found' });
+  res.status(404).json({ 
+    error: 'Not found',
+    requestId: req.id
+  });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT || 3001;
 
 const server = http.createServer(app);
 const io = initSocket(server);
 
+// Graceful shutdown
+const shutdown = async () => {
+  logger.info('Shutting down gracefully...');
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+  await prisma.$disconnect();
+  process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📁 Uploads directory: ${path.join(__dirname, '../../uploads')}`);
+  logger.info(`🚀 Server running on port ${PORT}`);
+  logger.info(`📁 Environment: ${env.NODE_ENV}`);
+  logger.info(`📁 Uploads directory: ${path.join(__dirname, '../../uploads')}`);
 });
 
 export default app;

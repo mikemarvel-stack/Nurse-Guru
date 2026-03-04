@@ -100,6 +100,7 @@ A complete marketplace platform for nursing students to buy and sell study mater
 ### Prerequisites
 - Docker and Docker Compose installed
 - Stripe account (for payments)
+- **Strong JWT secret (generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`)**
 
 ### 1. Clone and Setup
 
@@ -111,7 +112,7 @@ cd nurse-guru-fullstack
 
 ```bash
 cp .env.example .env
-# Edit .env with your values
+# IMPORTANT: Edit .env and set strong JWT_SECRET and Stripe keys
 ```
 
 ### 3. Build and Run
@@ -130,6 +131,19 @@ The application will be available at:
 docker-compose exec server npx prisma migrate dev
 docker-compose exec server npm run db:seed
 ```
+
+## Security Features
+
+- ✅ JWT Authentication with strong secret validation
+- ✅ Helmet.js security headers (CSP, HSTS, XSS protection)
+- ✅ Rate limiting (endpoint-specific)
+- ✅ Input sanitization
+- ✅ File upload security (path traversal protection)
+- ✅ Request timeout protection
+- ✅ Structured logging with Winston
+- ✅ Environment variable validation
+- ✅ Docker security (non-root user, health checks)
+- ✅ Comprehensive error handling
 
 ## Development Setup
 
