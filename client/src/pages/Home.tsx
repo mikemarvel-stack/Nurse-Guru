@@ -183,9 +183,19 @@ export function Home() {
       <SEO data={seoConfigs.home()} />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-teal-600 via-teal-700 to-emerald-800 py-20 lg:py-28">
+      <section className="relative overflow-hidden py-20 lg:py-28">
+        {/* Animated Background Images */}
+        <div className="absolute inset-0 bg-gray-900">
+          <div className="absolute inset-0 opacity-100 animate-[slideshow_20s_ease-in-out_infinite]">
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1920&q=80')] bg-cover bg-center" style={{animation: 'zoom 20s ease-in-out infinite'}} />
+          </div>
+          <div className="absolute inset-0 opacity-0 animate-[slideshow_20s_ease-in-out_infinite]" style={{animationDelay: '10s'}}>
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=1920&q=80')] bg-cover bg-center" style={{animation: 'zoom 20s ease-in-out infinite', animationDelay: '10s'}} />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-600/60 via-teal-700/50 to-emerald-800/60" />
+        </div>
         {/* Decorative elements */}
-        <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/5" />
           <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-white/5" />
           <div className="absolute top-1/2 left-1/4 h-64 w-64 rounded-full bg-teal-500/10" />
