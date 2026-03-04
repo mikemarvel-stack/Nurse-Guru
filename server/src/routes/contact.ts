@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../index';
+import createRateLimiter from '../middleware/rateLimit';
 
 const router = Router();
-const prisma = new PrismaClient();
+const contactLimiter = createRateLimiter(60 * 60 * 1000, 5); // 5 submissions per hour per IP
 
 const contactMessageSchema = z.object({
   name: z.string().min(2),
@@ -13,8 +14,8 @@ const contactMessageSchema = z.object({
   type: z.enum(['general', 'support', 'sales', 'bug']).optional()
 });
 
-// Submit contact form
-router.post('/', async (req, res) => {
+// Submit contact form (rate limited)
+router.post('/', contactLimiter, async (req, res) => {
   try {
     const data = contactMessageSchema.parse(req.body);
 

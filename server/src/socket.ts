@@ -1,12 +1,15 @@
 import { Server as IOServer } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
-let io: IOServer | null = null;
+let io: SocketIOServer | null = null;
 
-export const initSocket = (server: any) => {
+import { Server as SocketIOServer } from 'socket.io';
+import type { Server } from 'http';
+
+export const initSocket = (server: Server) => {
   if (io) return io;
 
-  io = new IOServer(server, {
+  io = new SocketIOServer(server, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:5173',
       methods: ['GET', 'POST'],
@@ -19,7 +22,7 @@ export const initSocket = (server: any) => {
       const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query.token;
       if (!token) return;
 
-      const decoded = jwt.verify(token as string, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token as string, process.env.JWT_SECRET || 'default-dev-secret') as { userId: string };
       const userId = decoded?.userId;
       if (!userId) return;
 
@@ -36,4 +39,4 @@ export const initSocket = (server: any) => {
   return io;
 };
 
-export const getIo = () => io;
+export const getIo = (): SocketIOServer | null => io;

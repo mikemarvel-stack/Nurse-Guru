@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
-
-const router = Router();
-const prisma = new PrismaClient();
+import { prisma } from '../index';
+import { authenticate, AuthRequest, requireAdmin } from '../middleware/auth';
 
 const createNotificationSchema = z.object({
   userId: z.string(),
@@ -72,8 +69,8 @@ router.put('/read-all', authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-// Create notification (internal/admin)
-router.post('/', async (req, res) => {
+// Create notification (admin only - internal use)
+router.post('/', authenticate, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId, title, message, type } = createNotificationSchema.parse(req.body);
 

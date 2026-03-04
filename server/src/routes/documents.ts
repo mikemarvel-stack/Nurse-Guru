@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../index';
 import { authenticate, AuthRequest, requireSeller, requireAdmin } from '../middleware/auth';
-
-const router = Router();
-const prisma = new PrismaClient();
 
 const createDocumentSchema = z.object({
   title: z.string().min(3),
@@ -44,7 +41,7 @@ router.get('/', async (req, res) => {
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
-    const where: any = { status: 'APPROVED' };
+    const where: { status: string; OR?: any[]; category?: string; level?: string; subject?: any; price?: any; rating?: any } = { status: 'APPROVED' };
 
     if (search) {
       where.OR = [
@@ -61,7 +58,7 @@ router.get('/', async (req, res) => {
     if (maxPrice) where.price = { ...where.price, lte: parseFloat(maxPrice as string) };
     if (minRating) where.rating = { gte: parseFloat(minRating as string) };
 
-    const orderBy: any = {};
+    const orderBy: { price?: string; rating?: string; salesCount?: string; createdAt?: string } = {};
     switch (sortBy) {
       case 'price-low':
         orderBy.price = 'asc';

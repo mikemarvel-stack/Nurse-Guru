@@ -1,9 +1,6 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../index';
 import { authenticate, AuthRequest } from '../middleware/auth';
-
-const router = Router();
-const prisma = new PrismaClient();
 
 // Get cart items
 router.get('/', authenticate, async (req: AuthRequest, res) => {
@@ -26,7 +23,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const total = cartItems.reduce((sum: number, item: any) => sum + item.document.price, 0);
+    const total = cartItems.reduce((sum: number, item) => sum + item.document.price, 0);
 
     res.json({ items: cartItems, total });
   } catch (error) {

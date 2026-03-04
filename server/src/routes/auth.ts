@@ -2,10 +2,9 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../index';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -101,7 +100,7 @@ router.post('/login', async (req, res) => {
     // Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || 'default-dev-secret',
       { expiresIn: '7d' }
     );
 
@@ -136,7 +135,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-dev-secret') as { userId: string; email: string; role: string; iat: number; exp: number };
     
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

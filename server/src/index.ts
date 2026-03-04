@@ -29,6 +29,14 @@ dotenv.config();
 const app = express();
 export const prisma = new PrismaClient();
 
+if (!process.env.JWT_SECRET) {
+  console.warn(
+    '⚠️  JWT_SECRET not provided in environment variables. ' +
+    'Using a default secret for development. ' +
+    'Set JWT_SECRET in .env for production!'
+  );
+}
+
 // Trust proxy
 app.set('trust proxy', 1);
 
